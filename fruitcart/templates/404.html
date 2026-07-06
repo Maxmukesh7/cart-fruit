@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+
+{% block title %}Page Not Found — FruitCart{% endblock %}
+
+{% block content %}
+<section class="cart-empty" style="min-height: 60vh; border: none; background: transparent;">
+  <div class="cart-empty__icon" aria-hidden="true" style="font-size: 6rem; filter: none;">🍋</div>
+  <h1 class="cart-empty__title" style="font-size: 3rem; margin-bottom: 1rem;">Oops! 404</h1>
+  <p class="cart-empty__text" style="font-size: 1.1rem; max-width: 400px; margin-bottom: 2rem;">
+    We couldn't find the page you're looking for. It might have been moved, or perhaps it was just a bad apple!
+  </p>
+  <a href="{% url 'store:home' %}" class="btn btn--primary btn--lg">
+    ← Back to Home
+  </a>
+</section>
+{% endblock %}

@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="FruitCart — Fresh, organic fruits delivered to your doorstep. Shop seasonal fruits, berries, tropicals and more." />
+  <title>{% block title %}{{ page_title|default:"FruitCart" }}{% endblock %}</title>
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+
+  <!-- Static CSS -->
+  {% load static %}
+  <link rel="stylesheet" href="{% static 'css/style.css' %}" />
+
+  {% block extra_head %}{% endblock %}
+</head>
+<body {% block body_attrs %}{% endblock %}>
+
+  <!-- ============ NAVBAR ============ -->
+  <header class="navbar" id="main-navbar">
+    <div class="navbar__container">
+
+      <!-- Logo -->
+      <a href="{% url 'store:home' %}" class="navbar__logo" id="navbar-logo">
+        <span class="navbar__logo-icon">🍊</span>
+        <span class="navbar__logo-text">Fruit<span class="navbar__logo-accent">Cart</span></span>
+      </a>
+
+      <!-- Nav Links -->
+      <nav class="navbar__nav" id="main-nav">
+        <a href="{% url 'store:home' %}"   class="navbar__link {% if request.resolver_match.url_name == 'home' %}navbar__link--active{% endif %}" id="nav-home">Home</a>
+        <a href="{% url 'store:fruits' %}" class="navbar__link {% if request.resolver_match.url_name in 'fruits fruit_detail' %}navbar__link--active{% endif %}" id="nav-fruits">Fruits</a>
+
+        {% if user.is_authenticated %}
+          <a href="{% url 'store:cart' %}" class="navbar__link navbar__link--cart {% if request.resolver_match.url_name == 'cart' %}navbar__link--active{% endif %}" id="nav-cart">
+            <span class="cart-icon">🛒</span> Cart
+            <span class="cart-badge {% if cart_count == 0 %}cart-badge--hidden{% endif %}" id="cart-badge">{{ cart_count }}</span>
+          </a>
+          <span class="navbar__user" id="nav-username">
+            <span class="navbar__user-avatar" aria-hidden="true">👤</span>
+            {{ user.username }}
+          </span>
+          <a href="{% url 'store:orders' %}" class="navbar__link {% if request.resolver_match.url_name in 'orders order_detail' %}navbar__link--active{% endif %}" id="nav-orders">My Orders</a>
+          <form action="{% url 'accounts:logout' %}" method="post" class="navbar__logout-form" id="nav-logout-form">
+            {% csrf_token %}
+            <button type="submit" class="navbar__link navbar__link--btn" id="nav-logout">Logout</button>
+          </form>
+        {% else %}
+          <a href="{% url 'accounts:login' %}"    class="navbar__link navbar__link--btn {% if request.resolver_match.url_name == 'login' %}navbar__link--active{% endif %}" id="nav-login">Login</a>
+          <a href="{% url 'accounts:register' %}" class="navbar__link navbar__link--btn navbar__link--btn-primary {% if request.resolver_match.url_name == 'register' %}navbar__link--active{% endif %}" id="nav-register">Register</a>
+        {% endif %}
+      </nav>
+
+      <!-- Mobile hamburger -->
+      <button class="navbar__hamburger" id="hamburger-btn" aria-label="Toggle navigation" aria-expanded="false">
+        <span></span><span></span><span></span>
+      </button>
+
+    </div>
+  </header>
+
+  <div class="mobile-menu" id="mobile-menu" aria-hidden="true">
+    <nav class="mobile-menu__nav">
+      <a href="{% url 'store:home' %}"   class="mobile-menu__link" id="mob-home">🏠 Home</a>
+      <a href="{% url 'store:fruits' %}" class="mobile-menu__link" id="mob-fruits">🍎 Fruits</a>
+
+      {% if user.is_authenticated %}
+        <a href="{% url 'store:cart' %}" class="mobile-menu__link" id="mob-cart">🛒 Cart</a>
+        <a href="{% url 'store:orders' %}" class="mobile-menu__link" id="mob-orders">📦 My Orders</a>
+        <span class="mobile-menu__user" id="mob-username">👤 {{ user.username }}</span>
+        <form action="{% url 'accounts:logout' %}" method="post" id="mob-logout-form">
+          {% csrf_token %}
+          <button type="submit" class="mobile-menu__link mobile-menu__link--logout">🚪 Logout</button>
+        </form>
+      {% else %}
+        <a href="{% url 'accounts:login' %}"    class="mobile-menu__link" id="mob-login">🔑 Login</a>
+        <a href="{% url 'accounts:register' %}" class="mobile-menu__link mobile-menu__link--primary" id="mob-register">✨ Register</a>
+      {% endif %}
+    </nav>
+  </div>
+
+  <!-- ============ MAIN CONTENT ============ -->
+  <main id="main-content">
+    {% if messages %}
+      <div class="messages" id="flash-messages">
+        {% for message in messages %}
+          <div class="message message--{{ message.tags }}" role="alert">
+            {{ message }}
+            <button class="message__close" onclick="this.parentElement.remove()" aria-label="Dismiss">✕</button>
+          </div>
+        {% endfor %}
+      </div>
+    {% endif %}
+
+    {% block content %}{% endblock %}
+  </main>
+
+  <!-- ============ FOOTER ============ -->
+  <footer class="footer" id="main-footer">
+    <div class="footer__container">
+
+      <div class="footer__brand">
+        <a href="{% url 'store:home' %}" class="footer__logo" id="footer-logo">
+          <span>🍊</span> FruitCart
+        </a>
+        <p class="footer__tagline">Fresh fruits, delivered with love. <br/>From farm to your doorstep.</p>
+      </div>
+
+      <div class="footer__links">
+        <div class="footer__col">
+          <h4 class="footer__col-title">Shop</h4>
+          <a href="{% url 'store:fruits' %}" class="footer__link" id="footer-fruits">All Fruits</a>
+          <a href="{% url 'store:cart' %}"   class="footer__link" id="footer-cart">Cart</a>
+        </div>
+        <div class="footer__col">
+          <h4 class="footer__col-title">Account</h4>
+          {% if user.is_authenticated %}
+            <span class="footer__link" style="color:rgba(255,255,255,0.8)">👤 {{ user.username }}</span>
+            <a href="{% url 'store:orders' %}" class="footer__link" id="footer-orders">My Orders</a>
+            <form action="{% url 'accounts:logout' %}" method="post" style="margin:0">
+              {% csrf_token %}
+              <button type="submit" class="footer__link footer__link--btn" id="footer-logout">Logout</button>
+            </form>
+          {% else %}
+            <a href="{% url 'accounts:login' %}"    class="footer__link" id="footer-login">Login</a>
+            <a href="{% url 'accounts:register' %}" class="footer__link" id="footer-register">Register</a>
+          {% endif %}
+        </div>
+        <div class="footer__col">
+          <h4 class="footer__col-title">Info</h4>
+          <a href="#" class="footer__link" id="footer-about">About Us</a>
+          <a href="#" class="footer__link" id="footer-contact">Contact</a>
+        </div>
+      </div>
+
+    </div>
+
+    <div class="footer__bottom">
+      <p>&copy; 2026 FruitCart. Made with 🍋 and lots of love.</p>
+    </div>
+  </footer>
+
+  <!-- Main JavaScript -->
+  <script src="{% static 'js/main.js' %}"></script>
+  {% block extra_scripts %}{% endblock %}
+
+</body>
+</html>

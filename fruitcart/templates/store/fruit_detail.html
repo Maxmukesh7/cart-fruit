@@ -1,0 +1,172 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}{{ fruit.name }} — FruitCart{% endblock %}
+
+{% block content %}
+
+{# ── Breadcrumb ────────────────────────────────────────────── #}
+<nav class="breadcrumb" id="detail-breadcrumb" aria-label="Breadcrumb">
+  <div class="breadcrumb__container">
+    <a href="{% url 'store:home' %}" class="breadcrumb__link">Home</a>
+    <span class="breadcrumb__sep" aria-hidden="true">›</span>
+    <a href="{% url 'store:fruits' %}" class="breadcrumb__link">Fruits</a>
+    <span class="breadcrumb__sep" aria-hidden="true">›</span>
+    <span class="breadcrumb__current" aria-current="page">{{ fruit.name }}</span>
+  </div>
+</nav>
+
+{# ── Detail Section ────────────────────────────────────────── #}
+<section class="fruit-detail" id="fruit-detail">
+  <div class="fruit-detail__container">
+
+    {# ── Left: Image ─────────────────────────────────────── #}
+    <div class="fruit-detail__image-col">
+      <div class="fruit-detail__img-wrap">
+        {% if fruit.image %}
+          <img
+            src="{{ fruit.image.url }}"
+            alt="{{ fruit.name }}"
+            class="fruit-detail__img"
+          />
+        {% else %}
+          <div class="fruit-detail__img-placeholder" aria-hidden="true">🍑</div>
+        {% endif %}
+
+        {% if not fruit.in_stock %}
+          <div class="fruit-detail__oos-badge">Out of Stock</div>
+        {% endif %}
+      </div>
+    </div>
+
+    {# ── Right: Info ─────────────────────────────────────── #}
+    <div class="fruit-detail__info-col">
+
+      {# Category pill #}
+      {% if fruit.category %}
+        <a
+          href="{% url 'store:fruits' %}?category={{ fruit.category.slug }}"
+          class="detail-category-badge"
+          id="detail-category-link"
+        >{{ fruit.category.name }}</a>
+      {% endif %}
+
+      <h1 class="fruit-detail__name" id="fruit-name">{{ fruit.name }}</h1>
+
+      {# Price #}
+      <div class="fruit-detail__price-row">
+        <span class="fruit-detail__price price-unit" id="fruit-price">
+          <span class="price-unit__price">₹{{ fruit.price }}</span>
+          <span class="price-unit__unit">/ {{ fruit.unit_display }}</span>
+        </span>
+      </div>
+
+      {# Stock & Availability #}
+      <div class="fruit-detail__stock-row" id="fruit-stock-row">
+        {% if fruit.in_stock %}
+          <span class="stock-badge stock-badge--in stock-badge--lg">✓ In Stock</span>
+          <span class="fruit-detail__stock-count">{{ fruit.stock }} unit{{ fruit.stock|pluralize }} available</span>
+        {% else %}
+          <span class="stock-badge stock-badge--out stock-badge--lg">✕ Out of Stock</span>
+        {% endif %}
+      </div>
+
+      {# Description #}
+      {% if fruit.description %}
+        <div class="fruit-detail__desc" id="fruit-description">
+          <h2 class="fruit-detail__desc-title">About this fruit</h2>
+          <p>{{ fruit.description }}</p>
+        </div>
+      {% endif %}
+
+      {# Divider #}
+      <hr class="fruit-detail__divider" />
+
+      {# CTA Buttons #}
+      <div class="fruit-detail__actions" id="fruit-actions">
+        {% if fruit.in_stock %}
+          <form
+            action="{% url 'store:cart_add' fruit.pk %}"
+            method="post"
+            class="fruit-detail__add-form"
+            id="add-to-cart-form"
+          >
+            {% csrf_token %}
+            <input type="hidden" name="next" value="{{ request.path }}" />
+            <div class="fruit-detail__qty-row">
+              <label for="detail-qty-input" class="fruit-detail__qty-label">Qty:</label>
+              <div class="detail-qty-wrap">
+                <button type="button" class="qty-btn qty-btn--decrease" id="detail-qty-decrease" aria-label="Decrease">−</button>
+                <input
+                  type="number"
+                  name="quantity"
+                  id="detail-qty-input"
+                  value="1"
+                  min="1"
+                  max="{{ fruit.stock }}"
+                  class="qty-input qty-input--detail"
+                />
+                <button type="button" class="qty-btn qty-btn--increase" id="detail-qty-increase" aria-label="Increase">+</button>
+              </div>
+            </div>
+            <button
+              type="submit"
+              class="btn btn--primary btn--lg fruit-detail__add-btn"
+              id="add-to-cart-btn"
+            >
+              🛒 Add to Cart
+            </button>
+          </form>
+          {% if cart_qty > 0 %}
+            <p class="cart-already-note" id="already-in-cart-note">
+              ✓ Already in cart: <strong>{{ cart_qty }}</strong> unit{{ cart_qty|pluralize }}
+              — <a href="{% url 'store:cart' %}">View cart →</a>
+            </p>
+          {% endif %}
+        {% else %}
+          <button
+            class="btn btn--primary btn--lg fruit-detail__add-btn"
+            disabled
+            aria-disabled="true"
+          >🛒 Add to Cart</button>
+        {% endif %}
+
+        <a
+          href="{% url 'store:fruits' %}"
+          class="btn btn--outline"
+          id="back-to-fruits-btn"
+        >← Back to Fruits</a>
+      </div>
+
+      {% if not fruit.in_stock %}
+        <p class="fruit-detail__oos-note" id="oos-note">
+          ⚠️ This fruit is currently unavailable. Please check back later.
+        </p>
+      {% endif %}
+
+    </div>
+  </div>
+</section>
+
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+  // +/- buttons on fruit detail page
+  (function () {
+    const input    = document.getElementById('detail-qty-input');
+    const decBtn   = document.getElementById('detail-qty-decrease');
+    const incBtn   = document.getElementById('detail-qty-increase');
+    if (!input) return;
+
+    decBtn && decBtn.addEventListener('click', () => {
+      const v = parseInt(input.value, 10);
+      if (v > parseInt(input.min, 10)) input.value = v - 1;
+    });
+    incBtn && incBtn.addEventListener('click', () => {
+      const v = parseInt(input.value, 10);
+      if (v < parseInt(input.max, 10)) input.value = v + 1;
+    });
+  })();
+</script>
+{% endblock %}

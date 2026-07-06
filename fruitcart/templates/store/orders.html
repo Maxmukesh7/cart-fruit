@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+
+{% block title %}My Orders — FruitCart{% endblock %}
+
+{% block content %}
+
+<section class="page-hero page-hero--compact" id="orders-hero">
+  <div class="page-hero__container">
+    <div class="section-badge">📦 Order History</div>
+    <h1 class="page-hero__title">My Orders</h1>
+  </div>
+</section>
+
+<section class="orders-section" id="orders-section">
+  <div class="orders-section__container">
+
+    {% if orders %}
+      <div class="orders-list">
+        {% for order in orders %}
+          <div class="order-card">
+            <div class="order-card__header">
+              <div class="order-card__info">
+                <span class="order-card__id">Order #{{ order.pk }}</span>
+                <span class="order-card__date">{{ order.created_at|date:"M d, Y, h:i A" }}</span>
+              </div>
+              <div class="order-card__status">
+                <span class="order-status-badge order-status-badge--{{ order.status|lower }}">{{ order.status }}</span>
+              </div>
+            </div>
+            
+            <div class="order-card__body">
+              <div class="order-card__meta">
+                <strong>Total:</strong> ₹{{ order.total_amount }} <br/>
+                <strong>Items:</strong> {{ order.items.count }}
+              </div>
+              <div class="order-card__actions">
+                <a href="{% url 'store:order_detail' order.pk %}" class="btn btn--outline btn--sm">View Details →</a>
+              </div>
+            </div>
+          </div>
+        {% endfor %}
+      </div>
+    {% else %}
+      <div class="cart-empty" id="orders-empty">
+        <div class="cart-empty__icon" aria-hidden="true">📦</div>
+        <h2 class="cart-empty__title">No orders yet</h2>
+        <p class="cart-empty__text">
+          You haven't placed any orders with us yet.
+        </p>
+        <a href="{% url 'store:fruits' %}" class="btn btn--primary btn--lg">
+          🍎 Start Shopping
+        </a>
+      </div>
+    {% endif %}
+
+  </div>
+</section>
+
+{% endblock %}

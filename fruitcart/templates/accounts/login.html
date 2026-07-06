@@ -1,0 +1,137 @@
+{% extends "base.html" %}
+
+{% block title %}Sign In — FruitCart{% endblock %}
+
+{% block content %}
+
+<section class="auth-page" id="login-page">
+  <div class="auth-page__container">
+
+    {# ── Decorative side panel ────────────────────────────── #}
+    <div class="auth-panel auth-panel--login" aria-hidden="true">
+      <div class="auth-panel__inner">
+        <div class="auth-panel__icon">🍎</div>
+        <h2 class="auth-panel__title">Welcome back!</h2>
+        <p class="auth-panel__text">
+          Sign in to access your cart, track orders, and enjoy
+          exclusive member prices on the freshest fruits around.
+        </p>
+        <ul class="auth-panel__perks">
+          <li>🛒 Saved cart across devices</li>
+          <li>📦 Real-time order tracking</li>
+          <li>❤️ Personalised recommendations</li>
+          <li>⚡ One-tap reorder</li>
+        </ul>
+      </div>
+    </div>
+
+    {# ── Login form card ──────────────────────────────────── #}
+    <div class="auth-card" id="login-card">
+
+      <div class="auth-card__header">
+        <span class="auth-card__emoji" aria-hidden="true">🔑</span>
+        <h1 class="auth-card__title">Sign in to FruitCart</h1>
+        <p class="auth-card__subtitle">
+          New here?
+          <a href="{% url 'accounts:register' %}" class="auth-card__link" id="go-to-register">Create a free account →</a>
+        </p>
+      </div>
+
+      {# Inline credential error banner #}
+      {% if error %}
+        <div class="auth-error-banner" id="login-error-banner" role="alert">
+          <span aria-hidden="true">⚠️</span> {{ error }}
+        </div>
+      {% endif %}
+
+      <form
+        class="auth-form"
+        id="login-form"
+        method="post"
+        action="{% url 'accounts:login' %}"
+        novalidate
+      >
+        {% csrf_token %}
+        {# Pass ?next forward if set #}
+        {% if next %}
+          <input type="hidden" name="next" value="{{ next }}" />
+        {% endif %}
+
+        {# ── Username ──────────────────────────────────────── #}
+        <div class="form-field" id="field-login-username">
+          <label class="form-field__label" for="id_login_username">
+            👤 Username
+          </label>
+          <input
+            class="form-field__input {% if error %}form-field__input--error{% endif %}"
+            type="text"
+            id="id_login_username"
+            name="username"
+            placeholder="Your username"
+            autocomplete="username"
+            required
+            autofocus
+          />
+        </div>
+
+        {# ── Password ──────────────────────────────────────── #}
+        <div class="form-field" id="field-login-password">
+          <label class="form-field__label" for="id_login_password">
+            🔒 Password
+          </label>
+          <div class="form-field__input-wrap">
+            <input
+              class="form-field__input {% if error %}form-field__input--error{% endif %}"
+              type="password"
+              id="id_login_password"
+              name="password"
+              placeholder="Your password"
+              autocomplete="current-password"
+              required
+            />
+            <button
+              type="button"
+              class="form-field__toggle-pw"
+              data-target="id_login_password"
+              aria-label="Toggle password visibility"
+              id="toggle-login-pw"
+            >👁</button>
+          </div>
+        </div>
+
+        {# ── Submit ────────────────────────────────────────── #}
+        <button
+          type="submit"
+          class="btn btn--primary btn--lg auth-form__submit"
+          id="login-submit-btn"
+        >
+          Sign in →
+        </button>
+
+      </form>
+
+      <p class="auth-card__footer-note">
+        Forgot your password? Contact support — password reset coming soon.
+      </p>
+
+    </div>
+
+  </div>
+</section>
+
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+  // Toggle password visibility
+  document.querySelectorAll('.form-field__toggle-pw').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const input = document.getElementById(btn.dataset.target);
+      if (!input) return;
+      const isText = input.type === 'text';
+      input.type = isText ? 'password' : 'text';
+      btn.textContent = isText ? '👁' : '🙈';
+    });
+  });
+</script>
+{% endblock %}

@@ -1,0 +1,113 @@
+{% extends "base.html" %}
+
+{% block title %}Order #{{ order.pk }} — FruitCart{% endblock %}
+
+{% block content %}
+
+<section class="page-hero page-hero--compact" id="order-detail-hero">
+  <div class="page-hero__container">
+    <div class="section-badge">📄 Order Details</div>
+    <h1 class="page-hero__title">Order #{{ order.pk }}</h1>
+    <p class="page-hero__subtitle">Placed on {{ order.created_at|date:"F d, Y, h:i A" }}</p>
+  </div>
+</section>
+
+<section class="order-detail-section" id="order-detail-section">
+  <div class="order-detail-section__container">
+
+    <div class="order-detail-grid">
+      
+      {# ══ Left: Items ══════════════════════════════ #}
+      <div class="order-items-col">
+        <div class="order-card order-card--full">
+          <h2 class="order-card__title">Items in this order</h2>
+          <table class="order-items-table">
+            <thead>
+              <tr>
+                <th>Fruit</th>
+                <th>Price</th>
+                <th>Qty</th>
+                <th class="text-right">Subtotal</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for item in order.items.all %}
+                <tr>
+                  <td>
+                    {% if item.fruit %}
+                      <a href="{% url 'store:fruit_detail' item.fruit.slug %}" class="order-item-link">{{ item.fruit_name }}</a>
+                    {% else %}
+                      {{ item.fruit_name }} <span class="text-muted">(Unavailable)</span>
+                    {% endif %}
+                  </td>
+                  <td>
+                    <span class="price-unit">
+                      <span class="price-unit__price">₹{{ item.price }}</span>
+                      {% if item.unit_display %}
+                        <span class="price-unit__unit">/ {{ item.unit_display }}</span>
+                      {% endif %}
+                    </span>
+                  </td>
+                  <td>{{ item.quantity }}</td>
+                  <td class="text-right font-medium">₹{{ item.subtotal }}</td>
+                </tr>
+              {% endfor %}
+            </tbody>
+            <tfoot>
+              <tr>
+                <td colspan="3" class="text-right"><strong>Grand Total:</strong></td>
+                <td class="text-right font-bold text-lg">₹{{ order.total_amount }}</td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+      </div>
+
+      {# ══ Right: Status & Shipping ══════════════════════════════ #}
+      <div class="order-meta-col">
+        
+        {# Status Box #}
+        <div class="order-card order-card--status">
+          <h2 class="order-card__title">Order Status</h2>
+          <div class="order-status-display">
+            <span class="order-status-badge order-status-badge--{{ order.status|lower }} order-status-badge--lg">
+              {{ order.status }}
+            </span>
+          </div>
+          {% if order.status == 'Pending' %}
+            <p class="text-sm text-muted mt-2">Your order is received and awaiting confirmation.</p>
+          {% elif order.status == 'Confirmed' %}
+            <p class="text-sm text-muted mt-2">Your order is confirmed and being prepared for dispatch.</p>
+          {% elif order.status == 'Delivered' %}
+            <p class="text-sm text-muted mt-2">Your order has been delivered successfully.</p>
+          {% elif order.status == 'Cancelled' %}
+            <p class="text-sm text-muted mt-2">This order was cancelled.</p>
+          {% endif %}
+        </div>
+
+        {# Shipping Box #}
+        <div class="order-card">
+          <h2 class="order-card__title">Shipping Details</h2>
+          <div class="shipping-details-text">
+            <p><strong>{{ order.full_name }}</strong></p>
+            <p>{{ order.phone }}</p>
+            <p class="mt-2">{{ order.address|linebreaksbr }}</p>
+            <p>{{ order.city }} - {{ order.pincode }}</p>
+          </div>
+          
+          <hr class="checkout-divider my-4" />
+          
+          <h2 class="order-card__title text-sm">Payment Method</h2>
+          <p class="text-sm">Cash on Delivery (COD)</p>
+        </div>
+
+        <a href="{% url 'store:orders' %}" class="btn btn--outline btn--full mt-4">← Back to My Orders</a>
+
+      </div>
+
+    </div>
+
+  </div>
+</section>
+
+{% endblock %}

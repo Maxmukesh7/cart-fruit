@@ -1,0 +1,264 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Our Fruits — FruitCart{% endblock %}
+
+{% block body_attrs %}data-page="fruits"{% endblock %}
+
+{% block content %}
+
+{# ── Page Hero ─────────────────────────────────────────────── #}
+<section class="page-hero" id="fruits-hero">
+  <div class="page-hero__container">
+    <div class="section-badge">🍎 Fresh Selection</div>
+    <h1 class="page-hero__title">Our Fruits</h1>
+    <p class="page-hero__subtitle">
+      Hand-picked, farm-fresh fruits delivered straight to your doorstep.
+    </p>
+  </div>
+</section>
+
+{# ── Filters & Search Bar ──────────────────────────────────── #}
+<section class="fruits-toolbar" id="fruits-toolbar">
+  <div class="fruits-toolbar__container">
+
+    {# Search form #}
+    <form class="search-form" id="fruits-search-form" method="get" action="{% url 'store:fruits' %}" role="search">
+      {% if active_category %}
+        <input type="hidden" name="category" value="{{ active_category.slug }}" />
+      {% endif %}
+      <div class="search-form__input-wrap">
+        <span class="search-form__icon" aria-hidden="true">🔍</span>
+        <input
+          class="search-form__input"
+          type="search"
+          id="fruit-search-input"
+          name="search"
+          placeholder="Search fruits…"
+          value="{{ search_query }}"
+          autocomplete="off"
+        />
+        {% if search_query %}
+          <a href="{% url 'store:fruits' %}{% if active_category %}?category={{ active_category.slug }}{% endif %}"
+             class="search-form__clear" id="search-clear-btn" aria-label="Clear search">✕</a>
+        {% endif %}
+      </div>
+      <button type="submit" class="btn btn--primary search-form__btn" id="search-submit-btn">Search</button>
+    </form>
+
+    {# Category filter pills & Sorting #}
+    <div class="filters-row" style="display: flex; justify-content: space-between; align-items: center; margin-top: 1rem; flex-wrap: wrap; gap: 1rem;">
+      {% if categories %}
+      <div class="category-filters" id="category-filters" role="group" aria-label="Filter by category">
+        <a
+          href="{% url 'store:fruits' %}?sort={{ sort_by }}{% if search_query %}&search={{ search_query }}{% endif %}"
+          class="category-pill {% if not active_category %}category-pill--active{% endif %}"
+          id="cat-all"
+        >All</a>
+        {% for cat in categories %}
+          <a
+            href="{% url 'store:fruits' %}?category={{ cat.slug }}&sort={{ sort_by }}{% if search_query %}&search={{ search_query }}{% endif %}"
+            class="category-pill {% if active_category.slug == cat.slug %}category-pill--active{% endif %}"
+            id="cat-{{ cat.slug }}"
+          >{{ cat.name }}</a>
+        {% endfor %}
+      </div>
+      {% endif %}
+
+      {# Sorting Dropdown #}
+      <form class="sort-form" method="get" action="{% url 'store:fruits' %}">
+        {% if search_query %}<input type="hidden" name="search" value="{{ search_query }}" />{% endif %}
+        {% if active_category %}<input type="hidden" name="category" value="{{ active_category.slug }}" />{% endif %}
+        <select name="sort" class="form-field__input" style="padding: 0.5rem; border-radius: var(--radius-md); border: 1px solid var(--border-light); font-size: 0.9rem;" onchange="this.form.submit()">
+          <option value="newest" {% if sort_by == 'newest' %}selected{% endif %}>Sort by: Newest</option>
+          <option value="price_asc" {% if sort_by == 'price_asc' %}selected{% endif %}>Sort by: Price (Low to High)</option>
+          <option value="price_desc" {% if sort_by == 'price_desc' %}selected{% endif %}>Sort by: Price (High to Low)</option>
+        </select>
+      </form>
+    </div>
+
+  </div>
+</section>
+
+{# ── Results Summary ───────────────────────────────────────── #}
+<section class="fruits-results" id="fruits-results">
+  <div class="fruits-results__container">
+
+    {# Active filter tags #}
+    {% if search_query or active_category %}
+    <div class="active-filters" id="active-filters">
+      {% if search_query %}
+        <span class="filter-tag">
+          Search: <strong>{{ search_query }}</strong>
+          <a href="{% url 'store:fruits' %}{% if active_category %}?category={{ active_category.slug }}{% endif %}" class="filter-tag__remove" aria-label="Remove search filter">✕</a>
+        </span>
+      {% endif %}
+      {% if active_category %}
+        <span class="filter-tag">
+          Category: <strong>{{ active_category.name }}</strong>
+          <a href="{% url 'store:fruits' %}{% if search_query %}?search={{ search_query }}{% endif %}" class="filter-tag__remove" aria-label="Remove category filter">✕</a>
+        </span>
+      {% endif %}
+    </div>
+    {% endif %}
+
+    <p class="results-count" id="results-count">
+      Showing <strong>{{ result_count }}</strong> fruit{{ result_count|pluralize }}
+      {% if search_query %}for "<em>{{ search_query }}</em>"{% endif %}
+    </p>
+
+    {# ── Fruit Grid ────────────────────────────────────────── #}
+    {% if fruits %}
+      <div class="fruit-grid" id="fruit-grid">
+        {% for fruit in fruits %}
+          {# float wrapper — animation lives here, hover lift lives on the inner article #}
+          <div class="fruit-card-float">
+            <article class="fruit-card {% if not fruit.in_stock %}fruit-card--oos{% endif %}"
+                     id="fruit-{{ fruit.id }}"
+                     aria-label="{{ fruit.name }}">
+
+              {# Card image #}
+              <div class="fruit-card__img-wrap">
+                <a href="{% url 'store:fruit_detail' fruit.slug %}" class="fruit-card__img-link" aria-hidden="true" tabindex="-1">
+                  {% if fruit.image %}
+                    <img
+                      src="{{ fruit.image.url }}"
+                      alt="{{ fruit.name }}"
+                      class="fruit-card__img"
+                      loading="lazy"
+                    />
+                  {% else %}
+                    <div class="fruit-card__img-placeholder" aria-hidden="true">🍑</div>
+                  {% endif %}
+                </a>
+
+                {# Out-of-stock overlay #}
+                {% if not fruit.in_stock %}
+                  <div class="fruit-card__oos-overlay">Out of Stock</div>
+                {% endif %}
+
+                {# Qty overlay — only for in-stock fruits #}
+                {% if fruit.in_stock %}
+                  <div class="card-qty-overlay" aria-label="Quantity selector">
+                    <button
+                      type="button"
+                      class="card-qty-btn card-qty-btn--dec"
+                      data-form="add-form-{{ fruit.slug }}"
+                      aria-label="Decrease quantity"
+                    >−</button>
+                    <span class="card-qty-display" id="qty-display-{{ fruit.slug }}">1</span>
+                    <button
+                      type="button"
+                      class="card-qty-btn card-qty-btn--inc"
+                      data-form="add-form-{{ fruit.slug }}"
+                      data-max="{{ fruit.stock }}"
+                      aria-label="Increase quantity"
+                    >+</button>
+                  </div>
+                {% endif %}
+              </div>
+
+              {# Card body #}
+              <div class="fruit-card__body">
+                {% if fruit.category %}
+                  <span class="fruit-card__category">{{ fruit.category.name }}</span>
+                {% endif %}
+
+                <h2 class="fruit-card__name">
+                  <a href="{% url 'store:fruit_detail' fruit.slug %}">{{ fruit.name }}</a>
+                </h2>
+
+                <div class="fruit-card__meta">
+                  <span class="fruit-card__price price-unit">
+                    <span class="price-unit__price">₹{{ fruit.price }}</span>
+                    <span class="price-unit__unit">/ {{ fruit.unit_display }}</span>
+                  </span>
+                  {% if fruit.in_stock %}
+                    <span class="stock-badge stock-badge--in">In Stock</span>
+                  {% else %}
+                    <span class="stock-badge stock-badge--out">Out of Stock</span>
+                  {% endif %}
+                </div>
+
+                <div class="fruit-card__actions">
+                  <a
+                    href="{% url 'store:fruit_detail' fruit.slug %}"
+                    class="btn btn--outline fruit-card__view-btn"
+                    id="view-{{ fruit.slug }}"
+                  >Details</a>
+
+                  {% if fruit.in_stock %}
+                    <form
+                      action="{% url 'store:cart_add' fruit.pk %}"
+                      method="post"
+                      class="fruit-card__add-form add-to-cart-form"
+                      id="add-form-{{ fruit.slug }}"
+                    >
+                      {% csrf_token %}
+                      <input type="hidden" name="quantity" value="1" />
+                      <input type="hidden" name="next" value="{{ request.get_full_path }}#fruit-{{ fruit.id }}" />
+                      <button
+                        type="submit"
+                        class="btn btn--primary fruit-card__add-btn"
+                        id="cart-add-{{ fruit.slug }}"
+                      >+ Cart</button>
+                    </form>
+                  {% else %}
+                    <button class="btn btn--primary fruit-card__add-btn fruit-card__add-btn--disabled" disabled>
+                      + Cart
+                    </button>
+                  {% endif %}
+                </div>
+              </div>
+
+            </article>
+          </div>{# /fruit-card-float #}
+        {% endfor %}
+      </div>
+
+      {# ── Pagination ───────────────────────────────────────── #}
+      {% if fruits.has_other_pages %}
+      <div class="pagination" style="display: flex; justify-content: center; align-items: center; gap: 0.5rem; margin-top: 3rem;">
+        {% if fruits.has_previous %}
+          <a href="?page={{ fruits.previous_page_number }}&sort={{ sort_by }}{% if search_query %}&search={{ search_query }}{% endif %}{% if active_category %}&category={{ active_category.slug }}{% endif %}" class="btn btn--outline" style="padding: 0.5rem 1rem;">&laquo; Prev</a>
+        {% else %}
+          <span class="btn btn--outline" style="padding: 0.5rem 1rem; opacity: 0.5; cursor: not-allowed;">&laquo; Prev</span>
+        {% endif %}
+
+        <span class="pagination__current" style="font-weight: 600; color: var(--text-dark);">
+          Page {{ fruits.number }} of {{ fruits.paginator.num_pages }}
+        </span>
+
+        {% if fruits.has_next %}
+          <a href="?page={{ fruits.next_page_number }}&sort={{ sort_by }}{% if search_query %}&search={{ search_query }}{% endif %}{% if active_category %}&category={{ active_category.slug }}{% endif %}" class="btn btn--outline" style="padding: 0.5rem 1rem;">Next &raquo;</a>
+        {% else %}
+          <span class="btn btn--outline" style="padding: 0.5rem 1rem; opacity: 0.5; cursor: not-allowed;">Next &raquo;</span>
+        {% endif %}
+      </div>
+      {% endif %}
+
+    {% else %}
+      {# Empty state #}
+      <div class="empty-state" id="fruits-empty-state">
+        <div class="empty-state__icon">🔍</div>
+        <h2 class="empty-state__title">No fruits found</h2>
+        <p class="empty-state__text">
+          {% if search_query %}
+            No fruits match "<strong>{{ search_query }}</strong>".
+            Try a different search term or browse all fruits.
+          {% elif active_category %}
+            No fruits in this category yet. Check back soon!
+          {% else %}
+            No fruits are currently available. Check back soon!
+          {% endif %}
+        </p>
+        <a href="{% url 'store:fruits' %}" class="btn btn--outline" id="clear-filters-btn">
+          Clear Filters
+        </a>
+      </div>
+    {% endif %}
+
+  </div>
+</section>
+
+{% endblock %}

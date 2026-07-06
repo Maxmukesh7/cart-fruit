@@ -1,0 +1,143 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}FruitCart — Fresh Fruits Delivered to Your Doorstep{% endblock %}
+
+{% block content %}
+
+<!-- ====== HERO SECTION ====== -->
+<section class="hero" id="hero-section">
+  <div class="hero__bg-shapes">
+    <div class="hero__shape hero__shape--1"></div>
+    <div class="hero__shape hero__shape--2"></div>
+    <div class="hero__shape hero__shape--3"></div>
+  </div>
+
+  <div class="hero__container">
+    <div class="hero__content">
+      <div class="hero__badge" id="hero-badge">🌿 100% Organic &amp; Fresh</div>
+      <h1 class="hero__title" id="hero-title">
+        Fresh Fruits <br />
+        <span class="hero__title-accent">Delivered to Your</span><br />
+        Doorstep
+      </h1>
+      <p class="hero__subtitle" id="hero-subtitle">
+        Hand-picked seasonal fruits from local farms. 
+        Order before noon for same-day delivery. 
+        No chemicals, no compromise — just pure, wholesome goodness.
+      </p>
+      <div class="hero__actions" id="hero-actions">
+        <a href="{% url 'store:fruits' %}" class="btn btn--primary btn--lg" id="hero-shop-btn">
+          🍎 Shop Fruits
+        </a>
+        <a href="#how-it-works" class="btn btn--outline btn--lg" id="hero-learn-btn">
+          Learn More ↓
+        </a>
+      </div>
+      <div class="hero__stats" id="hero-stats">
+        <div class="hero__stat">
+          <span class="hero__stat-number">25+</span>
+          <span class="hero__stat-label">Fruit Varieties</span>
+        </div>
+        <div class="hero__stat-divider"></div>
+      
+        <div class="hero__stat">
+          <span class="hero__stat-number">2K+</span>
+          <span class="hero__stat-label">Happy Customers</span>
+        </div>
+        <div class="hero__stat-divider"></div>
+        <div class="hero__stat">
+          <span class="hero__stat-number">4.9★</span>
+          <span class="hero__stat-label">Average Rating</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="hero__visual" id="hero-visual" aria-hidden="true">
+      <div class="hero__3d-scene" id="hero-3d-scene">
+        <div class="hero__3d-card" id="hero-3d-card">
+          <div class="hero__photo-wrap">
+            <img
+              src="{% static 'images/hero_fruit_basket.jpg' %}"
+              alt="Fresh fruit basket overflowing with colourful fruits"
+              class="hero__photo"
+              loading="eager"
+            />
+            <div class="hero__3d-shine" id="hero-3d-shine"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ====== FEATURE STRIPS ====== -->
+<section class="features" id="features-section">
+  <div class="features__container">
+    <div class="feature-card" id="feature-fresh">
+      <div class="feature-card__icon">🌱</div>
+      <h3 class="feature-card__title">Farm Fresh</h3>
+      <p class="feature-card__desc">Sourced directly from trusted local farms — no middlemen.</p>
+    </div>
+    <div class="feature-card" id="feature-delivery">
+      <div class="feature-card__icon">⚡</div>
+      <h3 class="feature-card__title">Same-Day Delivery</h3>
+      <p class="feature-card__desc">Order by noon and receive your fruits before dinner.</p>
+    </div>
+    <div class="feature-card" id="feature-organic">
+      <div class="feature-card__icon">🍃</div>
+      <h3 class="feature-card__title">100% Organic</h3>
+      <p class="feature-card__desc">No pesticides, no chemicals — only pure natural goodness.</p>
+    </div>
+    <div class="feature-card" id="feature-price">
+      <div class="feature-card__icon">💰</div>
+      <h3 class="feature-card__title">Best Prices</h3>
+      <p class="feature-card__desc">Competitive pricing with weekly deals and seasonal offers.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ====== HOW IT WORKS ====== -->
+<section class="how-it-works" id="how-it-works">
+  <div class="section-container">
+    <div class="section-header" id="hiw-header">
+      <span class="section-badge">Simple Process</span>
+      <h2 class="section-title">How It Works</h2>
+      <p class="section-subtitle">Get fresh fruits in 3 easy steps</p>
+    </div>
+
+    <div class="steps" id="steps-grid">
+      <div class="step" id="step-1">
+        <div class="step__number">01</div>
+        <div class="step__icon">🔍</div>
+        <h3 class="step__title">Browse &amp; Pick</h3>
+        <p class="step__desc">Explore our wide selection of seasonal and exotic fruits.</p>
+      </div>
+      <div class="step__arrow" aria-hidden="true">→</div>
+      <div class="step" id="step-2">
+        <div class="step__number">02</div>
+        <div class="step__icon">🛒</div>
+        <h3 class="step__title">Add to Cart</h3>
+        <p class="step__desc">Select quantities and add your chosen fruits to the cart.</p>
+      </div>
+      <div class="step__arrow" aria-hidden="true">→</div>
+      <div class="step" id="step-3">
+        <div class="step__number">03</div>
+        <div class="step__icon">🚀</div>
+        <h3 class="step__title">Fast Delivery</h3>
+        <p class="step__desc">We deliver fresh fruits right to your doorstep, same day!</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ====== CTA SECTION ====== -->
+<section class="cta" id="cta-section">
+  <div class="cta__container">
+    <h2 class="cta__title">Ready to taste the freshness? 🍓</h2>
+    <p class="cta__subtitle">Join thousands of happy customers enjoying farm-fresh fruits.</p>
+    <a href="{% url 'store:fruits' %}" class="btn btn--white btn--lg" id="cta-btn">Start Shopping Now</a>
+  </div>
+</section>
+
+{% endblock %}

@@ -1,0 +1,127 @@
+{% extends "base.html" %}
+
+{% block title %}Checkout — FruitCart{% endblock %}
+
+{% block content %}
+
+{# ── Page Hero ─────────────────────────────────────────────── #}
+<section class="page-hero page-hero--compact" id="checkout-hero">
+  <div class="page-hero__container">
+    <div class="section-badge">🔒 Secure Checkout</div>
+    <h1 class="page-hero__title">Checkout</h1>
+    <p class="page-hero__subtitle">
+      Please provide your shipping details to complete your order.
+    </p>
+  </div>
+</section>
+
+<section class="checkout-section" id="checkout-section">
+  <div class="checkout-section__container">
+
+    <div class="cart-layout">
+      
+      {# ══ Left: Shipping Form ══════════════════════════════ #}
+      <div class="checkout-form-col">
+        <div class="checkout-card">
+          <h2 class="checkout-card__title">Shipping Information</h2>
+          
+          <form method="post" action="{% url 'store:checkout' %}" id="checkout-form" class="auth-form" novalidate>
+            {% csrf_token %}
+            
+            <div class="form-row">
+              <div class="form-field {% if form.full_name.errors %}form-field--error{% endif %}">
+                <label class="form-field__label" for="{{ form.full_name.id_for_label }}">Full Name</label>
+                {{ form.full_name }}
+                {% if form.full_name.errors %}
+                  <span class="form-field__error">{{ form.full_name.errors.0 }}</span>
+                {% endif %}
+              </div>
+              
+              <div class="form-field {% if form.phone.errors %}form-field--error{% endif %}">
+                <label class="form-field__label" for="{{ form.phone.id_for_label }}">Phone Number</label>
+                {{ form.phone }}
+                {% if form.phone.errors %}
+                  <span class="form-field__error">{{ form.phone.errors.0 }}</span>
+                {% endif %}
+              </div>
+            </div>
+
+            <div class="form-field {% if form.address.errors %}form-field--error{% endif %}">
+              <label class="form-field__label" for="{{ form.address.id_for_label }}">Delivery Address</label>
+              {{ form.address }}
+              {% if form.address.errors %}
+                <span class="form-field__error">{{ form.address.errors.0 }}</span>
+              {% endif %}
+            </div>
+
+            <div class="form-row">
+              <div class="form-field {% if form.city.errors %}form-field--error{% endif %}">
+                <label class="form-field__label" for="{{ form.city.id_for_label }}">City</label>
+                {{ form.city }}
+                {% if form.city.errors %}
+                  <span class="form-field__error">{{ form.city.errors.0 }}</span>
+                {% endif %}
+              </div>
+              
+              <div class="form-field {% if form.pincode.errors %}form-field--error{% endif %}">
+                <label class="form-field__label" for="{{ form.pincode.id_for_label }}">PIN Code</label>
+                {{ form.pincode }}
+                {% if form.pincode.errors %}
+                  <span class="form-field__error">{{ form.pincode.errors.0 }}</span>
+                {% endif %}
+              </div>
+            </div>
+
+            <div class="checkout-payment-info">
+              <span aria-hidden="true">💵</span> <strong>Payment Method:</strong> Cash on Delivery (COD) only.
+            </div>
+
+            <button type="submit" class="btn btn--primary btn--lg auth-form__submit" id="place-order-btn">
+              Place Order
+            </button>
+          </form>
+        </div>
+      </div>
+
+      {# ══ Right: Order Summary ══════════════════════════ #}
+      <aside class="cart-summary" id="checkout-summary">
+        <div class="cart-summary__card">
+          <h2 class="cart-summary__title">Order Summary</h2>
+
+          <div class="checkout-items-list">
+            {% for item in cart_items %}
+              <div class="checkout-item">
+                <span class="checkout-item__qty">{{ item.quantity }}x</span>
+                <span class="checkout-item__name">{{ item.name }}</span>
+                <span class="checkout-item__price">₹{{ item.subtotal_dec }}</span>
+              </div>
+            {% endfor %}
+          </div>
+
+          <hr class="checkout-divider" />
+
+          <dl class="cart-summary__lines">
+            <div class="cart-summary__line">
+              <dt class="cart-summary__label">Subtotal</dt>
+              <dd class="cart-summary__value">₹{{ total_price }}</dd>
+            </div>
+            <div class="cart-summary__line">
+              <dt class="cart-summary__label">Delivery</dt>
+              <dd class="cart-summary__value cart-summary__value--free">FREE</dd>
+            </div>
+            <div class="cart-summary__line cart-summary__line--total">
+              <dt class="cart-summary__label">Grand Total</dt>
+              <dd class="cart-summary__value cart-summary__value--total">₹{{ total_price }}</dd>
+            </div>
+          </dl>
+
+          <a href="{% url 'store:cart' %}" class="checkout-back-link">← Return to Cart</a>
+        </div>
+      </aside>
+
+    </div>
+
+  </div>
+</section>
+
+{% endblock %}

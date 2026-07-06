@@ -1,0 +1,213 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Your Cart — FruitCart{% endblock %}
+
+{% block content %}
+
+{# ── Page Hero ─────────────────────────────────────────────── #}
+<section class="page-hero page-hero--compact" id="cart-hero">
+  <div class="page-hero__container">
+    <div class="section-badge">🛒 Shopping Cart</div>
+    <h1 class="page-hero__title">Your Cart</h1>
+    {% if total_items > 0 %}
+      <p class="page-hero__subtitle">
+        {{ total_items }} item{{ total_items|pluralize }} ready to checkout.
+      </p>
+    {% endif %}
+  </div>
+</section>
+
+{# ── Cart Body ─────────────────────────────────────────────── #}
+<section class="cart-section" id="cart-section">
+  <div class="cart-section__container">
+
+    {% if cart_items %}
+
+      {# ── TWO-COLUMN LAYOUT: Items + Summary ─────────────── #}
+      <div class="cart-layout">
+
+        {# ══ Left: Cart Items ══════════════════════════════ #}
+        <div class="cart-items-col" id="cart-items-col">
+          <div class="cart-items-header">
+            <h2 class="cart-items-header__title">Cart Items</h2>
+            {# Clear-all form #}
+            <form action="{% url 'store:cart' %}" method="post" id="clear-cart-form">
+              {% csrf_token %}
+              <input type="hidden" name="_action" value="clear" />
+            </form>
+          </div>
+
+          {# ── Item rows ───────────────────────────────────── #}
+          {% for item in cart_items %}
+          <article class="cart-item" id="cart-item-{{ item.fruit_id }}">
+
+            {# Image #}
+            <a href="{% url 'store:fruit_detail' item.slug %}" class="cart-item__img-link">
+              <div class="cart-item__img-wrap">
+                {% if item.image_url %}
+                  <img
+                    src="{{ item.image_url }}"
+                    alt="{{ item.name }}"
+                    class="cart-item__img"
+                    loading="lazy"
+                  />
+                {% else %}
+                  <div class="cart-item__img-placeholder" aria-hidden="true">🍑</div>
+                {% endif %}
+              </div>
+            </a>
+
+            {# Details #}
+            <div class="cart-item__details">
+              <a href="{% url 'store:fruit_detail' item.slug %}" class="cart-item__name">
+                {{ item.name }}
+              </a>
+              <span class="cart-item__unit-price price-unit">
+                <span class="price-unit__price">₹{{ item.price_dec }}</span>
+                <span class="price-unit__unit">/ {{ item.unit_display|default:"piece" }}</span>
+              </span>
+            </div>
+
+            {# Quantity controls #}
+            <div class="cart-item__qty-wrap">
+              {# Decrease #}
+              <form action="{% url 'store:cart_update' item.fruit_id %}" method="post" class="qty-form">
+                {% csrf_token %}
+                <input type="hidden" name="quantity" value="{{ item.quantity|add:'-1' }}" />
+                <button
+                  type="submit"
+                  class="qty-btn qty-btn--decrease"
+                  id="decrease-{{ item.fruit_id }}"
+                  aria-label="Decrease quantity of {{ item.name }}"
+                  {% if item.quantity <= 1 %}title="Removes item from cart"{% endif %}
+                >−</button>
+              </form>
+
+              {# Current quantity display + direct-edit form #}
+              <form action="{% url 'store:cart_update' item.fruit_id %}" method="post" class="qty-form qty-form--inline">
+                {% csrf_token %}
+                <input
+                  type="number"
+                  name="quantity"
+                  value="{{ item.quantity }}"
+                  min="0"
+                  max="99"
+                  class="qty-input"
+                  id="qty-{{ item.fruit_id }}"
+                  aria-label="Quantity of {{ item.name }}"
+                />
+                <button type="submit" class="qty-update-btn" id="update-{{ item.fruit_id }}">Update</button>
+              </form>
+
+              {# Increase #}
+              <form action="{% url 'store:cart_update' item.fruit_id %}" method="post" class="qty-form">
+                {% csrf_token %}
+                <input type="hidden" name="quantity" value="{{ item.quantity|add:'1' }}" />
+                <button
+                  type="submit"
+                  class="qty-btn qty-btn--increase"
+                  id="increase-{{ item.fruit_id }}"
+                  aria-label="Increase quantity of {{ item.name }}"
+                >+</button>
+              </form>
+            </div>
+
+            {# Subtotal #}
+            <div class="cart-item__subtotal">
+              <span class="cart-item__subtotal-label">Subtotal</span>
+              <span class="cart-item__subtotal-value" id="subtotal-{{ item.fruit_id }}">₹{{ item.subtotal_dec }}</span>
+            </div>
+
+            {# Remove button #}
+            <form
+              action="{% url 'store:cart_remove' item.fruit_id %}"
+              method="post"
+              class="cart-item__remove-form"
+              onsubmit="return confirm('Remove this item from your cart?');"
+            >
+              {% csrf_token %}
+              <button
+                type="submit"
+                class="cart-item__remove-btn"
+                aria-label="Remove {{ item.name }} from cart"
+              >✕</button>
+            </form>
+
+          </article>
+          {% endfor %}
+
+          {# Continue shopping link #}
+          <div class="cart-continue">
+            <a href="{% url 'store:fruits' %}" class="btn btn--outline" id="continue-shopping-btn">
+              ← Continue Shopping
+            </a>
+          </div>
+        </div>
+
+        {# ══ Right: Order Summary ══════════════════════════ #}
+        <aside class="cart-summary" id="cart-summary">
+          <div class="cart-summary__card">
+            <h2 class="cart-summary__title">Order Summary</h2>
+
+            <dl class="cart-summary__lines">
+              <div class="cart-summary__line">
+                <dt class="cart-summary__label">Items ({{ total_items }})</dt>
+                <dd class="cart-summary__value">₹{{ total_price }}</dd>
+              </div>
+              <div class="cart-summary__line">
+                <dt class="cart-summary__label">Delivery</dt>
+                <dd class="cart-summary__value cart-summary__value--free">FREE</dd>
+              </div>
+              <div class="cart-summary__line cart-summary__line--total">
+                <dt class="cart-summary__label">Grand Total</dt>
+                <dd class="cart-summary__value cart-summary__value--total">₹{{ total_price }}</dd>
+              </div>
+            </dl>
+
+            {# Checkout button #}
+            <a
+              href="{% url 'store:checkout' %}"
+              class="btn btn--primary btn--lg cart-summary__checkout-btn"
+              id="checkout-btn"
+            >
+              🔒 Proceed to Checkout
+            </a>
+            <p class="cart-summary__checkout-note">
+              Cash on Delivery only.
+            </p>
+
+            <div class="cart-summary__badges">
+              <span class="trust-badge">🔒 Secure</span>
+              <span class="trust-badge">🚚 Free Delivery</span>
+              <span class="trust-badge">✓ Fresh Guarantee</span>
+            </div>
+          </div>
+        </aside>
+
+      </div>{# /.cart-layout #}
+
+    {% else %}
+
+      {# ── EMPTY CART STATE ────────────────────────────────── #}
+      <div class="cart-empty" id="cart-empty">
+        <div class="cart-empty__icon" aria-hidden="true">🛒</div>
+        <h2 class="cart-empty__title">Your cart is empty</h2>
+        <p class="cart-empty__text">
+          Looks like you haven't added any fruits yet.<br/>
+          Explore our fresh selection and fill your basket!
+        </p>
+        <a href="{% url 'store:fruits' %}" class="btn btn--primary btn--lg" id="browse-fruits-btn">
+          🍎 Browse Fruits
+        </a>
+      </div>
+
+    {% endif %}
+
+  </div>
+</section>
+
+{% endblock %}
+
+{% block extra_scripts %}
+{% endblock %}
