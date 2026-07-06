@@ -42,3 +42,4 @@ ENV/
 # Environments
 .env
 .env.local
+staticfiles/
