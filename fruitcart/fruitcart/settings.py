@@ -10,10 +10,9 @@ load_dotenv()
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-SECRET_KEY = os.getenv("SECRET_KEY", "unsafe-local-development-key")
+SECRET_KEY = os.getenv("SECRET_KEY")
 DEBUG = os.getenv("DEBUG", "False") == "True"
-
-ALLOWED_HOSTS = ["127.0.0.1", "localhost", ".onrender.com"]
+ALLOWED_HOSTS = os.getenv("ALLOWED_HOSTS", "").split(",")
 # Application definition
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -58,11 +57,9 @@ TEMPLATES = [
 WSGI_APPLICATION = 'fruitcart.wsgi.application'
 DATABASES = {
     "default": dj_database_url.config(
-        default=(
-            f"postgresql://{os.getenv('DB_USER')}:{os.getenv('DB_PASSWORD')}"
-            f"@{os.getenv('DB_HOST')}:{os.getenv('DB_PORT')}/{os.getenv('DB_NAME')}"
-        ),
+        default=os.getenv("DATABASE_URL"),
         conn_max_age=600,
+        ssl_require=False,
     )
 }
 # Password validation
