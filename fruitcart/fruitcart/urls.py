@@ -17,7 +17,7 @@ urlpatterns = [
 
 # Serve uploaded media files during development only
 # This appends URL patterns like /media/fruits/apple.jpg → MEDIA_ROOT/fruits/apple.jpg
-if settings.DEBUG:
-    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+
+urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 
 handler404 = 'store.views.custom_404'
