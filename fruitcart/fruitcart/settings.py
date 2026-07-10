@@ -104,3 +104,6 @@ LOGIN_URL          = '/login/'   # Where @login_required sends unauthenticated u
 LOGIN_REDIRECT_URL = '/'         # After successful login
 LOGOUT_REDIRECT_URL = '/'        # After logout (used by Django's built-in logout view)
 
+# Supabase public image URLs
+SUPABASE_URL = "https://bimksrfstpozpxgmnenc.supabase.co"
+MEDIA_URL = f"{SUPABASE_URL}/storage/v1/object/public/fruits/"
