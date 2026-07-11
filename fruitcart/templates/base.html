@@ -144,7 +144,7 @@
   </footer>
 
   <!-- Main JavaScript -->
-  <script src="{% static 'js/main.js' %}"></script>
+  <script src="{% static 'js/main.js' %}?v={% now 'U' %}"></script>
   {% block extra_scripts %}{% endblock %}
 
 </body>

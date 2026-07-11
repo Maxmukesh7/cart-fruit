@@ -10,11 +10,9 @@
   <div class="page-hero__container">
     <div class="section-badge">🛒 Shopping Cart</div>
     <h1 class="page-hero__title">Your Cart</h1>
-    {% if total_items > 0 %}
-      <p class="page-hero__subtitle">
-        {{ total_items }} item{{ total_items|pluralize }} ready to checkout.
-      </p>
-    {% endif %}
+    <p class="page-hero__subtitle" id="cart-hero-subtitle" {% if total_items == 0 %}style="display: none;"{% endif %}>
+      <span id="hero-item-count">{{ total_items }}</span> item<span id="hero-item-plural">{% if total_items != 1 %}s{% endif %}</span> ready to checkout.
+    </p>
   </div>
 </section>
 
@@ -22,10 +20,8 @@
 <section class="cart-section" id="cart-section">
   <div class="cart-section__container">
 
-    {% if cart_items %}
-
-      {# ── TWO-COLUMN LAYOUT: Items + Summary ─────────────── #}
-      <div class="cart-layout">
+    {# ── TWO-COLUMN LAYOUT: Items + Summary ─────────────── #}
+    <div class="cart-layout" id="cart-layout" {% if not cart_items %}style="display: none;"{% endif %}>
 
         {# ══ Left: Cart Items ══════════════════════════════ #}
         <div class="cart-items-col" id="cart-items-col">
@@ -152,8 +148,8 @@
 
             <dl class="cart-summary__lines">
               <div class="cart-summary__line">
-                <dt class="cart-summary__label">Items ({{ total_items }})</dt>
-                <dd class="cart-summary__value">₹{{ total_price }}</dd>
+                <dt class="cart-summary__label" id="summary-item-label">Items ({{ total_items }})</dt>
+                <dd class="cart-summary__value" id="summary-subtotal">₹{{ total_price }}</dd>
               </div>
               <div class="cart-summary__line">
                 <dt class="cart-summary__label">Delivery</dt>
@@ -161,7 +157,7 @@
               </div>
               <div class="cart-summary__line cart-summary__line--total">
                 <dt class="cart-summary__label">Grand Total</dt>
-                <dd class="cart-summary__value cart-summary__value--total">₹{{ total_price }}</dd>
+                <dd class="cart-summary__value cart-summary__value--total" id="summary-total">₹{{ total_price }}</dd>
               </div>
             </dl>
 
@@ -187,10 +183,8 @@
 
       </div>{# /.cart-layout #}
 
-    {% else %}
-
       {# ── EMPTY CART STATE ────────────────────────────────── #}
-      <div class="cart-empty" id="cart-empty">
+      <div class="cart-empty" id="cart-empty" {% if cart_items %}style="display: none;"{% endif %}>
         <div class="cart-empty__icon" aria-hidden="true">🛒</div>
         <h2 class="cart-empty__title">Your cart is empty</h2>
         <p class="cart-empty__text">
@@ -202,12 +196,184 @@
         </a>
       </div>
 
-    {% endif %}
-
   </div>
 </section>
 
 {% endblock %}
 
 {% block extra_scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  const cartSection = document.getElementById('cart-section');
+  if (!cartSection) return;
+
+  cartSection.addEventListener('submit', function(e) {
+    const form = e.target.closest('form');
+    if (!form) return;
+
+    const isUpdate = form.action.includes('/cart/update/');
+    const isRemove = form.action.includes('/cart/remove/');
+    if (!isUpdate && !isRemove) return;
+
+    // Prevent normal submit
+    e.preventDefault();
+
+    const cartItem = form.closest('.cart-item');
+    if (!cartItem) return;
+
+    const csrfToken = form.querySelector('[name=csrfmiddlewaretoken]')?.value;
+    const formData = new FormData(form);
+
+    // Loading state: disable inputs & buttons, add loading class
+    cartItem.classList.add('cart-item--loading');
+    const buttonsAndInputs = cartItem.querySelectorAll('button, input');
+    buttonsAndInputs.forEach(el => el.disabled = true);
+
+
+    fetch(form.action, {
+      method: 'POST',
+      headers: {
+        'X-Requested-With': 'XMLHttpRequest',
+        'X-CSRFToken': csrfToken,
+      },
+      body: formData
+    })
+    .then(response => {
+      if (!response.ok) {
+        throw new Error('Network response was not ok');
+      }
+      return response.json();
+    })
+    .then(data => {
+      if (data.success) {
+        // If the item was removed from the cart (either via cart_remove or qty decreasing to 0)
+        if (data.removed) {
+          // Smoothly animate the item collapse
+          cartItem.style.maxHeight = cartItem.offsetHeight + 'px';
+          cartItem.style.transition = 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)';
+          // Force layout reflow
+          cartItem.offsetHeight;
+          cartItem.classList.add('cart-item--removing');
+
+          setTimeout(() => {
+            cartItem.remove();
+            
+            // Toggle to empty-cart state if cart is now empty
+            const remainingItems = document.querySelectorAll('.cart-item');
+            if (remainingItems.length === 0) {
+              const cartLayout = document.getElementById('cart-layout');
+              const cartEmpty = document.getElementById('cart-empty');
+              if (cartLayout) cartLayout.style.display = 'none';
+              if (cartEmpty) cartEmpty.style.display = '';
+            }
+          }, 400);
+        } else {
+          // If the item quantity was updated, update values and inputs
+          const fruitId = cartItem.id.replace('cart-item-', '');
+          
+          // Update subtotals and inputs
+          const subtotalVal = document.getElementById('subtotal-' + fruitId);
+          if (subtotalVal) {
+            subtotalVal.textContent = data.line_subtotal;
+          }
+
+          const inlineInput = cartItem.querySelector('.qty-input');
+          if (inlineInput) {
+            inlineInput.value = data.quantity;
+          }
+
+          // Update the decrease form hidden input (quantity - 1)
+          const decreaseBtn = cartItem.querySelector('.qty-btn--decrease');
+          const decreaseForm = decreaseBtn?.closest('form');
+          const decreaseInput = decreaseForm?.querySelector('input[name="quantity"]');
+          if (decreaseInput) {
+            decreaseInput.value = data.quantity - 1;
+          }
+          if (decreaseBtn) {
+            if (data.quantity <= 1) {
+              decreaseBtn.setAttribute('title', 'Removes item from cart');
+            } else {
+              decreaseBtn.removeAttribute('title');
+            }
+          }
+
+          // Update the increase form hidden input (quantity + 1)
+          const increaseBtn = cartItem.querySelector('.qty-btn--increase');
+          const increaseForm = increaseBtn?.closest('form');
+          const increaseInput = increaseForm?.querySelector('input[name="quantity"]');
+          if (increaseInput) {
+            increaseInput.value = data.quantity + 1;
+          }
+
+          // Re-enable elements and remove loading class
+          cartItem.classList.remove('cart-item--loading');
+          buttonsAndInputs.forEach(el => el.disabled = false);
+        }
+
+        // Update Global Cart Counts and Totals
+        // 1. Navbar badge
+        const cartBadge = document.getElementById('cart-badge');
+        if (cartBadge) {
+          cartBadge.textContent = data.cart_count;
+          if (data.cart_count > 0) {
+            cartBadge.classList.remove('cart-badge--hidden');
+          } else {
+            cartBadge.classList.add('cart-badge--hidden');
+          }
+        }
+
+        // 2. Hero page subtitle count
+        const heroSubtitle = document.getElementById('cart-hero-subtitle');
+        const heroCount = document.getElementById('hero-item-count');
+        const heroPlural = document.getElementById('hero-item-plural');
+        if (data.total_items > 0) {
+          if (heroSubtitle) heroSubtitle.style.display = '';
+          if (heroCount) heroCount.textContent = data.total_items;
+          if (heroPlural) {
+            heroPlural.textContent = data.total_items === 1 ? '' : 's';
+          }
+        } else {
+          if (heroSubtitle) heroSubtitle.style.display = 'none';
+        }
+
+        // 3. Order summary card
+        const summaryItemLabel = document.getElementById('summary-item-label');
+        const summarySubtotal = document.getElementById('summary-subtotal');
+        const summaryTotal = document.getElementById('summary-total');
+        if (summaryItemLabel) {
+          summaryItemLabel.textContent = `Items (${data.total_items})`;
+        }
+        if (summarySubtotal) {
+          summarySubtotal.textContent = data.subtotal;
+        }
+        if (summaryTotal) {
+          summaryTotal.textContent = data.grand_total;
+        }
+
+        // 4. Show success toast notification using global helper
+        if (typeof showToast === 'function') {
+          showToast(data.message, data.msg_type || 'success');
+        }
+      } else {
+        // Handle server logic error
+        if (typeof showToast === 'function') {
+          showToast(data.message || 'Could not update cart.', 'error');
+        }
+        cartItem.classList.remove('cart-item--loading');
+        buttonsAndInputs.forEach(el => el.disabled = false);
+      }
+    })
+    .catch(error => {
+      console.error('AJAX Error:', error);
+      if (typeof showToast === 'function') {
+        showToast('Connection error. Falling back...', 'error');
+      }
+      // Re-enable and submit the form traditionally as a fallback
+      cartItem.classList.remove('cart-item--loading');
+      buttonsAndInputs.forEach(el => el.disabled = false);
+      form.submit();
+    });
+  });
+});
+</script>
 {% endblock %}

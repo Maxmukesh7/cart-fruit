@@ -7,10 +7,18 @@ from django.views.decorators.http import require_POST
 from django.contrib.auth.decorators import login_required
 from django.db import transaction
 from django.utils.http import url_has_allowed_host_and_scheme
+from django.http import JsonResponse
+import logging
+from datetime import timedelta
+from django.core.mail import send_mail
 
 from .models import Fruit, Category, Order, OrderItem
 from .cart import Cart
 from .forms import CheckoutForm
+
+logger = logging.getLogger(__name__)
+
+
 
 
 # ── Store pages ────────────────────────────────────────────────────
@@ -150,6 +158,11 @@ def cart_add(request, fruit_id):
     cart = Cart(request)
 
     if not fruit.in_stock:
+        if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+            return JsonResponse({
+                'success': False,
+                'message': f'Sorry, {fruit.name} is currently out of stock.'
+            }, status=400)
         messages.error(request, f'Sorry, {fruit.name} is currently out of stock.')
         return redirect(request.POST.get('next', 'store:fruits'))
 
@@ -159,20 +172,34 @@ def cart_add(request, fruit_id):
     except (ValueError, TypeError):
         quantity = 1
 
+    previous_qty = cart.get_quantity(fruit.pk)
     final_qty = cart.add(fruit, quantity=quantity)
 
-    if final_qty < (cart.get_quantity(fruit.pk) + quantity):
-        # Stock cap was applied
-        messages.warning(
-            request,
+    is_capped = final_qty < (previous_qty + quantity)
+
+    if is_capped:
+        message = (
             f'Only {fruit.stock} unit(s) of {fruit.name} available. '
             f'Cart updated to maximum stock.'
         )
+        msg_type = 'warning'
     else:
-        messages.success(
-            request,
-            f'🍊 {fruit.name} added to your cart!'
-        )
+        message = f'🍊 {fruit.name} added to your cart!'
+        msg_type = 'success'
+
+    if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+        return JsonResponse({
+            'success': True,
+            'cart_count': cart.total_items,
+            'message': message,
+            'msg_type': msg_type,
+            'fruit_name': fruit.name
+        })
+
+    if is_capped:
+        messages.warning(request, message)
+    else:
+        messages.success(request, message)
 
     # Redirect: respect POST 'next' (validated), then Referer, then cart
     next_url = request.POST.get('next') or request.META.get('HTTP_REFERER', '')
@@ -200,12 +227,40 @@ def cart_update(request, fruit_id):
     except (ValueError, TypeError):
         quantity = 1
 
+    requested_qty = quantity
     final_qty = cart.update(fruit, quantity=quantity)
+    is_capped = final_qty < requested_qty and final_qty > 0
 
     if final_qty == 0:
-        messages.info(request, f'{fruit.name} removed from your cart.')
+        message = f'{fruit.name} removed from your cart.'
+        msg_type = 'info'
+    elif is_capped:
+        message = f'Only {fruit.stock} unit(s) of {fruit.name} available. Cart updated to maximum stock.'
+        msg_type = 'warning'
     else:
-        messages.success(request, f'Cart updated — {fruit.name}: {final_qty} unit(s).')
+        message = f'Cart updated — {fruit.name}: {final_qty} unit(s).'
+        msg_type = 'success'
+
+    if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+        return JsonResponse({
+            'success': True,
+            'quantity': final_qty,
+            'line_subtotal': f"₹{cart._cart.get(str(fruit_id), {}).get('subtotal', '0.00')}",
+            'cart_count': cart.total_items,
+            'total_items': cart.total_items,
+            'subtotal': f"₹{cart.total_price}",
+            'grand_total': f"₹{cart.total_price}",
+            'removed': final_qty == 0,
+            'message': message,
+            'msg_type': msg_type,
+        })
+
+    if final_qty == 0:
+        messages.info(request, message)
+    elif is_capped:
+        messages.warning(request, message)
+    else:
+        messages.success(request, message)
 
     return redirect('store:cart')
 
@@ -220,11 +275,80 @@ def cart_remove(request, fruit_id):
     fruit = get_object_or_404(Fruit, pk=fruit_id)
     cart = Cart(request)
     cart.remove(fruit_id)
-    messages.info(request, f'{fruit.name} removed from your cart.')
+    
+    message = f'{fruit.name} removed from your cart.'
+    msg_type = 'info'
+
+    if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+        return JsonResponse({
+            'success': True,
+            'quantity': 0,
+            'line_subtotal': "₹0.00",
+            'cart_count': cart.total_items,
+            'total_items': cart.total_items,
+            'subtotal': f"₹{cart.total_price}",
+            'grand_total': f"₹{cart.total_price}",
+            'removed': True,
+            'message': message,
+            'msg_type': msg_type,
+        })
+
+    messages.info(request, message)
     return redirect('store:cart')
 
 
 # ── Stage 6: Checkout and Orders ────────────────────────────────────────
+
+def send_order_confirmation_email(order):
+    """
+    Sends a confirmation email to the user who placed the order.
+    """
+    subject = "FruitCart - Order Confirmed 🍎"
+    
+    # Calculate estimated delivery date (+2 days from order placement)
+    delivery_date = order.created_at + timedelta(days=2)
+    delivery_date_str = f"{delivery_date.day} {delivery_date.strftime('%B')} {delivery_date.year}"
+    
+    # Format order items list
+    items_list = []
+    for item in order.items.all():
+        items_list.append(f"• {item.fruit_name} x{item.quantity}")
+    items_text = "\n".join(items_list)
+    
+    # Format order ID (FC + 1000 + order.pk)
+    order_id_str = f"FC{1000 + order.pk}"
+    
+    # Format total
+    total_val = int(order.total_amount) if order.total_amount % 1 == 0 else order.total_amount
+
+    # Compose body
+    body = (
+        f"Hi {order.user.username},\n\n"
+        f"Thank you for shopping with FruitCart!\n\n"
+        f"Order ID: {order_id_str}\n\n"
+        f"Items:\n{items_text}\n\n"
+        f"Total: ₹{total_val}\n\n"
+        f"Estimated Delivery:\n{delivery_date_str}\n\n"
+        f"Thank you for choosing FruitCart."
+    )
+    
+    # Send email, log errors if sending fails, but do not crash the order process
+    try:
+        send_mail(
+            subject=subject,
+            message=body,
+            from_email=None,
+            recipient_list=[order.user.email],
+            fail_silently=False,
+        )
+        logger.info(f"Successfully sent order confirmation email for order {order_id_str} to {order.user.email}")
+    except Exception as e:
+        logger.error(
+            f"Failed to send order confirmation email for order {order_id_str} to {order.user.email}: {e}",
+            exc_info=True
+        )
+
+
 
 @login_required
 def checkout(request):
@@ -286,8 +410,11 @@ def checkout(request):
                 # Clear cart
                 cart.clear()
 
-                messages.success(request, f"Order #{order.pk} placed successfully! Thank you for shopping with us.")
-                return redirect('store:order_detail', order_id=order.pk)
+            # Send order confirmation email after successful transaction commit
+            send_order_confirmation_email(order)
+
+            messages.success(request, f"Order #{order.pk} placed successfully! Thank you for shopping with us.")
+            return redirect('store:order_detail', order_id=order.pk)
     else:
         form = CheckoutForm()
 

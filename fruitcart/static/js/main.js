@@ -303,5 +303,114 @@ document.addEventListener('DOMContentLoaded', () => {
     if (display) display.textContent = current;
   });
 
+  // ── 11. AJAX Add to Cart Submission ────────────────────────────
+  document.addEventListener('submit', function (e) {
+    const form = e.target.closest('form[action*="/cart/add/"]');
+    if (!form) return;
+
+    // Prevent default form page reload
+    e.preventDefault();
+
+    const submitBtn = form.querySelector('button[type="submit"]');
+    if (!submitBtn) return;
+
+    const originalText = submitBtn.innerHTML;
+    submitBtn.disabled = true;
+
+    const formData = new FormData(form);
+
+    fetch(form.action, {
+      method: 'POST',
+      headers: {
+        'X-Requested-With': 'XMLHttpRequest',
+      },
+      body: formData
+    })
+    .then(response => {
+      if (!response.ok) {
+        throw new Error('Server error');
+      }
+      return response.json();
+    })
+    .then(data => {
+      if (data.success) {
+        // Update navbar cart badge immediately
+        const cartBadge = document.getElementById('cart-badge');
+        if (cartBadge) {
+          cartBadge.textContent = data.cart_count;
+          if (data.cart_count > 0) {
+            cartBadge.classList.remove('cart-badge--hidden');
+          } else {
+            cartBadge.classList.add('cart-badge--hidden');
+          }
+        }
+
+        // Temporarily change clicked button text to "Added ✓"
+        submitBtn.innerHTML = 'Added ✓';
+
+        // Show a small success toast
+        showToast(data.message, data.msg_type || 'success');
+
+        // Restore button state
+        setTimeout(() => {
+          submitBtn.innerHTML = originalText;
+          submitBtn.disabled = false;
+        }, 1500);
+      } else {
+        showToast(data.message || 'Could not add to cart.', 'error');
+        submitBtn.innerHTML = originalText;
+        submitBtn.disabled = false;
+      }
+    })
+    .catch(error => {
+      console.error('Error adding to cart:', error);
+      showToast('Could not add item to cart. Falling back...', 'error');
+      
+      // Traditional fallback: submit the form without AJAX if fetch fails
+      form.submit();
+    });
+  });
+
+  // ── 12. Toast Notification Helpers ─────────────────────────────
+  function showToast(message, type = 'success') {
+    let container = document.querySelector('.toast-container');
+    if (!container) {
+      container = document.createElement('div');
+      container.className = 'toast-container';
+      document.body.appendChild(container);
+    }
+
+    const toast = document.createElement('div');
+    toast.className = `toast-notification toast-notification--${type}`;
+    toast.innerHTML = `
+      <div class="toast-notification__body">${message}</div>
+      <button type="button" class="toast-notification__close" aria-label="Close">✕</button>
+    `;
+
+    container.appendChild(toast);
+
+    toast.querySelector('.toast-notification__close').addEventListener('click', () => {
+      dismissToast(toast);
+    });
+
+    setTimeout(() => {
+      dismissToast(toast);
+    }, 3500);
+  }
+
+  function dismissToast(toast) {
+    toast.classList.add('toast-notification--fade-out');
+    toast.addEventListener('transitionend', () => {
+      toast.remove();
+      const container = document.querySelector('.toast-container');
+      if (container && container.children.length === 0) {
+        container.remove();
+      }
+    });
+  }
+
+  // Expose globally
+  window.showToast = showToast;
+
   console.log('✅ FruitCart JS initialised — all systems go!');
 });
