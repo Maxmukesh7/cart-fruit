@@ -240,3 +240,31 @@ class OrderItem(models.Model):
 
     def __str__(self):
         return f"{self.quantity}x {self.fruit_name} (Order #{self.order.pk})"
+
+
+class Wishlist(models.Model):
+    """Represents a fruit wishlisted/favorited by a user."""
+
+    user = models.ForeignKey(
+        'auth.User',
+        on_delete=models.CASCADE,
+        related_name='wishlist_items',
+        help_text="The customer who wishlisted this fruit."
+    )
+    fruit = models.ForeignKey(
+        Fruit,
+        on_delete=models.CASCADE,
+        related_name='wishlist_items',
+        help_text="The fruit that is wishlisted."
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ('user', 'fruit')
+        verbose_name = "Wishlist Item"
+        verbose_name_plural = "Wishlist Items"
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return f"{self.user.username} - {self.fruit.name}"
+

@@ -12,7 +12,7 @@ import logging
 from datetime import timedelta
 from django.core.mail import send_mail
 
-from .models import Fruit, Category, Order, OrderItem
+from .models import Fruit, Category, Order, OrderItem, Wishlist
 from .cart import Cart
 from .forms import CheckoutForm
 
@@ -447,3 +447,89 @@ def order_detail(request, order_id):
         'order': order,
     }
     return render(request, 'store/order_detail.html', context)
+
+
+@login_required
+def wishlist_detail(request):
+    """View to display the user's wishlist."""
+    wishlist_items = Wishlist.objects.filter(user=request.user).select_related('fruit')
+    context = {
+        'page_title': 'My Wishlist — FruitCart',
+        'wishlist_items': wishlist_items,
+    }
+    return render(request, 'store/wishlist.html', context)
+
+
+def wishlist_toggle(request, fruit_id):
+    """
+    AJAX-friendly view to toggle a fruit in the user's wishlist.
+    If anonymous, returns 401 with redirect URL.
+    """
+    if not request.user.is_authenticated:
+        login_url = '/login/'
+        from django.conf import settings
+        if hasattr(settings, 'LOGIN_URL'):
+            login_url = settings.LOGIN_URL
+        next_url = request.POST.get('next') or request.GET.get('next') or request.META.get('HTTP_REFERER', '/fruits/')
+        return JsonResponse({
+            'success': False,
+            'redirect_url': f"{login_url}?next={next_url}"
+        }, status=401)
+
+    if request.method == 'POST':
+        fruit = get_object_or_404(Fruit, pk=fruit_id, is_available=True)
+        wishlist_item = Wishlist.objects.filter(user=request.user, fruit=fruit).first()
+
+        if wishlist_item:
+            wishlist_item.delete()
+            added = False
+            message = f"Removed {fruit.name} from your wishlist."
+        else:
+            Wishlist.objects.create(user=request.user, fruit=fruit)
+            added = True
+            message = f"Added {fruit.name} to your wishlist!"
+
+        wishlist_count = Wishlist.objects.filter(user=request.user).count()
+
+        return JsonResponse({
+            'success': True,
+            'added': added,
+            'message': message,
+            'wishlist_count': wishlist_count,
+        })
+    
+    return JsonResponse({'success': False, 'message': 'Only POST method is allowed.'}, status=405)
+
+
+@login_required
+@require_POST
+def wishlist_move_to_cart(request, fruit_id):
+    """
+    AJAX view to move a fruit from wishlist to cart.
+    Adds fruit to cart and removes it from wishlist.
+    """
+    fruit = get_object_or_404(Fruit, pk=fruit_id, is_available=True)
+    cart = Cart(request)
+
+    if not fruit.in_stock:
+        return JsonResponse({
+            'success': False,
+            'message': f"Sorry, {fruit.name} is currently out of stock."
+        }, status=400)
+
+    # Add to cart
+    cart.add(fruit, quantity=1)
+
+    # Remove from wishlist
+    Wishlist.objects.filter(user=request.user, fruit=fruit).delete()
+
+    cart_count = cart.total_items
+    wishlist_count = Wishlist.objects.filter(user=request.user).count()
+
+    return JsonResponse({
+        'success': True,
+        'message': f"Moved {fruit.name} to your cart!",
+        'cart_count': cart_count,
+        'wishlist_count': wishlist_count
+    })
+

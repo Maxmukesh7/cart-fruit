@@ -7,7 +7,7 @@ search, inline editing, and image previews.
 """
 from django.contrib import admin
 from django.utils.html import format_html
-from .models import Category, Fruit, Order, OrderItem
+from .models import Category, Fruit, Order, OrderItem, Wishlist
 
 
 # ── Category Admin ────────────────────────────────────────────────
@@ -180,6 +180,14 @@ class OrderAdmin(admin.ModelAdmin):
 
     def has_add_permission(self, request):
         return False  # Orders should only be created via checkout
+
+
+@admin.register(Wishlist)
+class WishlistAdmin(admin.ModelAdmin):
+    list_display = ('id', 'user', 'fruit', 'created_at')
+    list_filter = ('created_at',)
+    search_fields = ('user__username', 'fruit__name')
+
 
 # ── Admin Site Branding ───────────────────────────────────────────
 admin.site.site_header  = "🍊 FruitCart Admin"

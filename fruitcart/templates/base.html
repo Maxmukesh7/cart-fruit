@@ -13,7 +13,7 @@
 
   <!-- Static CSS -->
   {% load static %}
-  <link rel="stylesheet" href="{% static 'css/style.css' %}" />
+  <link rel="stylesheet" href="{% static 'css/style.css' %}?v={% now 'U' %}" />
 
   {% block extra_head %}{% endblock %}
 </head>
@@ -35,6 +35,10 @@
         <a href="{% url 'store:fruits' %}" class="navbar__link {% if request.resolver_match.url_name in 'fruits fruit_detail' %}navbar__link--active{% endif %}" id="nav-fruits">Fruits</a>
 
         {% if user.is_authenticated %}
+          <a href="{% url 'store:wishlist' %}" class="navbar__link navbar__link--wishlist {% if request.resolver_match.url_name == 'wishlist' %}navbar__link--active{% endif %}" id="nav-wishlist">
+            <span class="wishlist-icon">❤️</span> Wishlist
+            <span class="wishlist-badge {% if wishlist_count == 0 %}wishlist-badge--hidden{% endif %}" id="wishlist-badge">{{ wishlist_count }}</span>
+          </a>
           <a href="{% url 'store:cart' %}" class="navbar__link navbar__link--cart {% if request.resolver_match.url_name == 'cart' %}navbar__link--active{% endif %}" id="nav-cart">
             <span class="cart-icon">🛒</span> Cart
             <span class="cart-badge {% if cart_count == 0 %}cart-badge--hidden{% endif %}" id="cart-badge">{{ cart_count }}</span>
@@ -68,6 +72,7 @@
       <a href="{% url 'store:fruits' %}" class="mobile-menu__link" id="mob-fruits">🍎 Fruits</a>
 
       {% if user.is_authenticated %}
+        <a href="{% url 'store:wishlist' %}" class="mobile-menu__link" id="mob-wishlist">❤️ Wishlist</a>
         <a href="{% url 'store:cart' %}" class="mobile-menu__link" id="mob-cart">🛒 Cart</a>
         <a href="{% url 'store:orders' %}" class="mobile-menu__link" id="mob-orders">📦 My Orders</a>
         <span class="mobile-menu__user" id="mob-username">👤 {{ user.username }}</span>
@@ -104,9 +109,11 @@
 
       <div class="footer__brand">
         <a href="{% url 'store:home' %}" class="footer__logo" id="footer-logo">
-          <span>🍊</span> FruitCart
+          <span class="footer__logo-icon">🍊</span>
+          <span class="footer__logo-text">Fruit<span class="footer__logo-accent">Cart</span></span>
         </a>
-        <p class="footer__tagline">Fresh fruits, delivered with love. <br/>From farm to your doorstep.</p>
+        <p class="footer__tagline">Fresh seasonal fruits sourced directly from local organic farms. Delivered fresh, pure, and chemical-free straight to your doorstep.</p>
+
       </div>
 
       <div class="footer__links">
@@ -118,7 +125,7 @@
         <div class="footer__col">
           <h4 class="footer__col-title">Account</h4>
           {% if user.is_authenticated %}
-            <span class="footer__link" style="color:rgba(255,255,255,0.8)">👤 {{ user.username }}</span>
+            <span class="footer__link" style="color:rgba(255,255,255,0.85); font-weight: 500;">👤 {{ user.username }}</span>
             <a href="{% url 'store:orders' %}" class="footer__link" id="footer-orders">My Orders</a>
             <form action="{% url 'accounts:logout' %}" method="post" style="margin:0">
               {% csrf_token %}
@@ -130,16 +137,17 @@
           {% endif %}
         </div>
         <div class="footer__col">
-          <h4 class="footer__col-title">Info</h4>
-          <a href="#" class="footer__link" id="footer-about">About Us</a>
-          <a href="#" class="footer__link" id="footer-contact">Contact</a>
+          <h4 class="footer__col-title">Contact</h4>
+          <span class="footer__info-item">📍 123 Organic Lane, Farmville</span>
+          <span class="footer__info-item">📞 +91 98765 43210</span>
+          <span class="footer__info-item">✉️ hello@fruitcart.com</span>
         </div>
       </div>
 
     </div>
 
     <div class="footer__bottom">
-      <p>&copy; 2026 FruitCart. Made with 🍋 and lots of love.</p>
+      <p>&copy; 2026 FruitCart. Made with 🍊 and lots of love. All rights reserved.</p>
     </div>
   </footer>
 

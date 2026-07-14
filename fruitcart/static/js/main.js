@@ -412,5 +412,184 @@ document.addEventListener('DOMContentLoaded', () => {
   // Expose globally
   window.showToast = showToast;
 
+  // ── 13. Wishlist AJAX Handlers ────────────────────────────────
+  
+  // Get CSRF cookie helper
+  function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+      const cookies = document.cookie.split(';');
+      for (let i = 0; i < cookies.length; i++) {
+        const cookie = cookies[i].trim();
+        if (cookie.substring(0, name.length + 1) === (name + '=')) {
+          cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+          break;
+        }
+      }
+    }
+    return cookieValue;
+  }
+
+  // Handle Wishlist Toggle click
+  document.addEventListener('click', function (e) {
+    const btn = e.target.closest('.wishlist-btn');
+    if (!btn) return;
+
+    e.preventDefault();
+    e.stopPropagation();
+
+    const url = btn.dataset.url;
+    if (!url) return;
+
+    btn.disabled = true;
+
+    fetch(url, {
+      method: 'POST',
+      headers: {
+        'X-Requested-With': 'XMLHttpRequest',
+        'X-CSRFToken': getCookie('csrftoken')
+      }
+    })
+    .then(response => {
+      if (response.status === 401) {
+        return response.json().then(data => {
+          if (data.redirect_url) {
+            window.location.href = data.redirect_url;
+          }
+          throw new Error('Unauthorized');
+        });
+      }
+      if (!response.ok) {
+        throw new Error('Network error');
+      }
+      return response.json();
+    })
+    .then(data => {
+      if (data.success) {
+        // Toggle active style
+        if (data.added) {
+          btn.classList.add('wishlist-btn--active');
+          showToast(data.message, 'success');
+        } else {
+          btn.classList.remove('wishlist-btn--active');
+          showToast(data.message, 'info');
+
+          // If on wishlist page, remove the card item
+          const wishlistCard = btn.closest('.wishlist-item-card');
+          if (wishlistCard) {
+            wishlistCard.classList.add('removing');
+            wishlistCard.addEventListener('transitionend', () => {
+              wishlistCard.remove();
+              checkWishlistEmpty();
+            });
+          }
+        }
+
+        // Update wishlist count badge
+        updateWishlistBadge(data.wishlist_count);
+      } else {
+        showToast(data.message || 'Error updating wishlist.', 'error');
+      }
+    })
+    .catch(error => {
+      if (error.message !== 'Unauthorized') {
+        console.error('Error toggling wishlist:', error);
+        showToast('Could not update wishlist.', 'error');
+      }
+    })
+    .finally(() => {
+      btn.disabled = false;
+    });
+  });
+
+  // Handle Wishlist "Move to Cart" form submission
+  document.addEventListener('submit', function (e) {
+    const form = e.target.closest('.wishlist-move-to-cart-form');
+    if (!form) return;
+
+    e.preventDefault();
+
+    const submitBtn = form.querySelector('.wishlist-move-btn');
+    if (submitBtn) submitBtn.disabled = true;
+
+    fetch(form.action, {
+      method: 'POST',
+      headers: {
+        'X-Requested-With': 'XMLHttpRequest',
+        'X-CSRFToken': getCookie('csrftoken')
+      }
+    })
+    .then(response => {
+      if (!response.ok) {
+        throw new Error('Network error');
+      }
+      return response.json();
+    })
+    .then(data => {
+      if (data.success) {
+        showToast(data.message, 'success');
+
+        // Update badges
+        updateWishlistBadge(data.wishlist_count);
+        updateCartBadge(data.cart_count);
+
+        // Remove card from wishlist view
+        const wishlistCard = form.closest('.wishlist-item-card');
+        if (wishlistCard) {
+          wishlistCard.classList.add('removing');
+          wishlistCard.addEventListener('transitionend', () => {
+            wishlistCard.remove();
+            checkWishlistEmpty();
+          });
+        }
+      } else {
+        showToast(data.message || 'Could not move item to cart.', 'error');
+        if (submitBtn) submitBtn.disabled = false;
+      }
+    })
+    .catch(error => {
+      console.error('Error moving item to cart:', error);
+      showToast('Could not move item to cart.', 'error');
+      if (submitBtn) submitBtn.disabled = false;
+    });
+  });
+
+  function updateWishlistBadge(count) {
+    const badge = document.getElementById('wishlist-badge');
+    if (badge) {
+      badge.textContent = count;
+      if (count > 0) {
+        badge.classList.remove('wishlist-badge--hidden');
+      } else {
+        badge.classList.add('wishlist-badge--hidden');
+      }
+    }
+  }
+
+  function updateCartBadge(count) {
+    const badge = document.getElementById('cart-badge');
+    if (badge) {
+      badge.textContent = count;
+      if (count > 0) {
+        badge.classList.remove('cart-badge--hidden');
+      } else {
+        badge.classList.add('cart-badge--hidden');
+      }
+    }
+  }
+
+  function checkWishlistEmpty() {
+    const grid = document.getElementById('wishlist-grid');
+    if (grid && grid.children.length === 0) {
+      grid.remove();
+      const emptyState = document.getElementById('wishlist-empty-state');
+      if (emptyState) {
+        emptyState.style.display = 'flex';
+      }
+    }
+  }
+
+
   console.log('✅ FruitCart JS initialised — all systems go!');
 });
+

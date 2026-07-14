@@ -1,0 +1,129 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}My Wishlist — FruitCart{% endblock %}
+
+{% block body_attrs %}data-page="wishlist"{% endblock %}
+
+{% block content %}
+<section class="page-hero" id="wishlist-hero">
+  <div class="page-hero__container">
+    <div class="section-badge">❤️ Saved Items</div>
+    <h1 class="page-hero__title">My Wishlist</h1>
+    <p class="page-hero__subtitle">
+      Manage your favorite fruits, check stock status, and add them to your cart.
+    </p>
+  </div>
+</section>
+
+<section class="wishlist-content" id="wishlist-content">
+  <div class="wishlist-content__container" style="max-width: 1200px; margin: 0 auto; padding: 2rem 1.5rem 5rem 1.5rem;">
+    
+    {# Empty state #}
+    <div class="empty-state" id="wishlist-empty-state" {% if wishlist_items %}style="display:none;"{% endif %}>
+      <div class="empty-state__icon">❤️</div>
+      <h2 class="empty-state__title">Your wishlist is empty</h2>
+      <p class="empty-state__text">
+        Browse our fresh selection of fruits and click the heart icon to add them here!
+      </p>
+      <a href="{% url 'store:fruits' %}" class="btn btn--primary" id="browse-fruits-btn">
+        🍎 Browse Fruits
+      </a>
+    </div>
+
+    {% if wishlist_items %}
+      <div class="fruit-grid" id="wishlist-grid">
+        {% for item in wishlist_items %}
+          <div class="fruit-card-float wishlist-item-card" id="wishlist-item-{{ item.fruit.id }}">
+            <article class="fruit-card {% if not item.fruit.in_stock %}fruit-card--oos{% endif %}"
+                     id="fruit-{{ item.fruit.id }}"
+                     aria-label="{{ item.fruit.name }}">
+
+              {# Card image #}
+              <div class="fruit-card__img-wrap">
+                {# Wishlist toggle button #}
+                <button
+                  type="button"
+                  class="wishlist-btn wishlist-btn--active"
+                  data-url="{% url 'store:wishlist_toggle' item.fruit.id %}"
+                  aria-label="Remove from wishlist"
+                >
+                  <svg class="heart-icon" viewBox="0 0 24 24">
+                    <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+                  </svg>
+                </button>
+                <a href="{% url 'store:fruit_detail' item.fruit.slug %}" class="fruit-card__img-link" aria-hidden="true" tabindex="-1">
+                  {% if item.fruit.image %}
+                    <img
+                      src="{{ item.fruit.image.url }}"
+                      alt="{{ item.fruit.name }}"
+                      class="fruit-card__img"
+                      loading="lazy"
+                    />
+                  {% else %}
+                    <div class="fruit-card__img-placeholder" aria-hidden="true">🍑</div>
+                  {% endif %}
+                </a>
+
+                {# Out-of-stock overlay #}
+                {% if not item.fruit.in_stock %}
+                  <div class="fruit-card__oos-overlay">Out of Stock</div>
+                {% endif %}
+              </div>
+
+              {# Card body #}
+              <div class="fruit-card__body">
+                {% if item.fruit.category %}
+                  <span class="fruit-card__category">{{ item.fruit.category.name }}</span>
+                {% endif %}
+
+                <h2 class="fruit-card__name">
+                  <a href="{% url 'store:fruit_detail' item.fruit.slug %}">{{ item.fruit.name }}</a>
+                </h2>
+
+                <div class="fruit-card__meta">
+                  <span class="fruit-card__price price-unit">
+                    <span class="price-unit__price">₹{{ item.fruit.price }}</span>
+                    <span class="price-unit__unit">/ {{ item.fruit.unit_display }}</span>
+                  </span>
+                  {% if item.fruit.in_stock %}
+                    <span class="stock-badge stock-badge--in">In Stock</span>
+                  {% else %}
+                    <span class="stock-badge stock-badge--out">Out of Stock</span>
+                  {% endif %}
+                </div>
+
+                <div class="fruit-card__actions">
+                  {% if item.fruit.in_stock %}
+                    <form
+                      action="{% url 'store:wishlist_move_to_cart' item.fruit.id %}"
+                      method="post"
+                      class="wishlist-move-to-cart-form"
+                      id="move-form-{{ item.fruit.slug }}"
+                      style="width: 100%;"
+                    >
+                      {% csrf_token %}
+                      <button
+                        type="submit"
+                        class="btn btn--primary wishlist-move-btn"
+                        id="move-btn-{{ item.fruit.slug }}"
+                        style="width: 100%; text-align: center; display: block;"
+                      >Move to Cart</button>
+                    </form>
+                  {% else %}
+                    <button class="btn btn--primary fruit-card__add-btn fruit-card__add-btn--disabled" style="width: 100%;" disabled>
+                      Out of Stock
+                    </button>
+                  {% endif %}
+                </div>
+              </div>
+
+            </article>
+          </div>{# /wishlist-item-card #}
+        {% endfor %}
+      </div>
+    {% endif %}
+
+  </div>
+</section>
+{% endblock %}

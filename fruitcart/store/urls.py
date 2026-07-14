@@ -21,5 +21,10 @@ urlpatterns = [
     path('checkout/', views.checkout, name='checkout'),                   # /checkout/
     path('orders/', views.orders_list, name='orders'),                    # /orders/
     path('orders/<int:order_id>/', views.order_detail, name='order_detail'), # /orders/<id>/
+
+    # ── Wishlist ───────────────────────────────────────────────────
+    path('wishlist/', views.wishlist_detail, name='wishlist'),
+    path('wishlist/toggle/<int:fruit_id>/', views.wishlist_toggle, name='wishlist_toggle'),
+    path('wishlist/move-to-cart/<int:fruit_id>/', views.wishlist_move_to_cart, name='wishlist_move_to_cart'),
 ]
 

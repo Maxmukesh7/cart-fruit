@@ -157,3 +157,95 @@ class CheckoutEmailTest(TestCase):
         self.assertIn("Total: ₹300", email.body)
         self.assertIn("Estimated Delivery:", email.body)
 
+
+class WishlistTest(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(username="testuser", email="test@example.com", password="password")
+        self.category = Category.objects.create(name="Citrus", slug="citrus")
+        self.fruit = Fruit.objects.create(
+            category=self.category,
+            name="Lemon",
+            slug="lemon",
+            price=5.00,
+            stock=100,
+            is_available=True,
+            unit="piece"
+        )
+        self.client = Client()
+
+    def test_anonymous_redirect_on_wishlist_page(self):
+        # Visiting wishlist page anonymous should redirect to login
+        response = self.client.get(reverse('store:wishlist'))
+        self.assertEqual(response.status_code, 302)
+        self.assertIn(reverse('accounts:login'), response.url)
+
+    def test_anonymous_redirect_on_wishlist_toggle(self):
+        # Toggling wishlist anonymous should return 401 with redirect url
+        response = self.client.post(
+            reverse('store:wishlist_toggle', args=[self.fruit.id]),
+            HTTP_X_REQUESTED_WITH='XMLHttpRequest'
+        )
+        self.assertEqual(response.status_code, 401)
+        data = response.json()
+        self.assertFalse(data['success'])
+        self.assertIn(reverse('accounts:login'), data['redirect_url'])
+
+    def test_logged_in_wishlist_toggle(self):
+        self.client.login(username="testuser", password="password")
+
+        # 1. Add to wishlist
+        response = self.client.post(
+            reverse('store:wishlist_toggle', args=[self.fruit.id]),
+            HTTP_X_REQUESTED_WITH='XMLHttpRequest'
+        )
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertTrue(data['success'])
+        self.assertTrue(data['added'])
+        self.assertEqual(data['wishlist_count'], 1)
+
+        # Verify in DB
+        from store.models import Wishlist
+        self.assertTrue(Wishlist.objects.filter(user=self.user, fruit=self.fruit).exists())
+
+        # 2. View on wishlist page
+        response = self.client.get(reverse('store:wishlist'))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Lemon")
+
+        # 3. Remove from wishlist
+        response = self.client.post(
+            reverse('store:wishlist_toggle', args=[self.fruit.id]),
+            HTTP_X_REQUESTED_WITH='XMLHttpRequest'
+        )
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertTrue(data['success'])
+        self.assertFalse(data['added'])
+        self.assertEqual(data['wishlist_count'], 0)
+
+        # Verify deleted in DB
+        self.assertFalse(Wishlist.objects.filter(user=self.user, fruit=self.fruit).exists())
+
+    def test_wishlist_move_to_cart(self):
+        self.client.login(username="testuser", password="password")
+
+        # Add to wishlist first
+        from store.models import Wishlist
+        Wishlist.objects.create(user=self.user, fruit=self.fruit)
+
+        # Move to cart
+        response = self.client.post(
+            reverse('store:wishlist_move_to_cart', args=[self.fruit.id]),
+            HTTP_X_REQUESTED_WITH='XMLHttpRequest'
+        )
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertTrue(data['success'])
+        self.assertEqual(data['cart_count'], 1)
+        self.assertEqual(data['wishlist_count'], 0)
+
+        # Verify in DB
+        self.assertFalse(Wishlist.objects.filter(user=self.user, fruit=self.fruit).exists())
+
+
