@@ -9,6 +9,35 @@ console.log('%c🍊 Fruit Cart loaded', 'color: #f97316; font-weight: bold; font
 // ─── DOM Ready ────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
 
+  // ── Theme Toggle Logic ──────────────────────────────────────────
+  const themeToggleBtn = document.getElementById('theme-toggle-btn');
+  const themeToggleIcon = document.getElementById('theme-toggle-icon');
+
+  if (themeToggleBtn && themeToggleIcon) {
+    const updateToggleIcon = (isDark) => {
+      themeToggleIcon.textContent = isDark ? '☀️' : '🌙';
+      themeToggleBtn.setAttribute('aria-label', isDark ? 'Switch to light mode' : 'Switch to dark mode');
+    };
+
+    // Synchronize the button emoji with the initial head script state
+    const isCurrentlyDark = document.documentElement.getAttribute('data-theme') === 'dark';
+    updateToggleIcon(isCurrentlyDark);
+
+    // Toggle event listener
+    themeToggleBtn.addEventListener('click', () => {
+      const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+      if (isDark) {
+        document.documentElement.removeAttribute('data-theme');
+        localStorage.setItem('theme', 'light');
+        updateToggleIcon(false);
+      } else {
+        document.documentElement.setAttribute('data-theme', 'dark');
+        localStorage.setItem('theme', 'dark');
+        updateToggleIcon(true);
+      }
+    });
+  }
+
   // ── 1. Navbar: add shadow on scroll ───────────────────────────
   const navbar = document.getElementById('main-navbar');
 

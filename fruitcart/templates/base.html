@@ -15,6 +15,18 @@
   {% load static %}
   <link rel="stylesheet" href="{% static 'css/style.css' %}?v={% now 'U' %}" />
 
+  <!-- Dark Mode Inline Detector -->
+  <script>
+    (function () {
+      const savedTheme = localStorage.getItem('theme');
+      if (savedTheme === 'dark' || (!savedTheme && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+        document.documentElement.setAttribute('data-theme', 'dark');
+      } else {
+        document.documentElement.removeAttribute('data-theme');
+      }
+    })();
+  </script>
+
   {% block extra_head %}{% endblock %}
 </head>
 <body {% block body_attrs %}{% endblock %}>
@@ -58,10 +70,17 @@
         {% endif %}
       </nav>
 
-      <!-- Mobile hamburger -->
-      <button class="navbar__hamburger" id="hamburger-btn" aria-label="Toggle navigation" aria-expanded="false">
-        <span></span><span></span><span></span>
-      </button>
+      <!-- Navbar Actions (Theme Toggle & Hamburger) -->
+      <div class="navbar__actions">
+        <button class="theme-toggle" id="theme-toggle-btn" aria-label="Toggle dark mode" type="button">
+          <span class="theme-toggle__icon" id="theme-toggle-icon">🌙</span>
+        </button>
+
+        <!-- Mobile hamburger -->
+        <button class="navbar__hamburger" id="hamburger-btn" aria-label="Toggle navigation" aria-expanded="false">
+          <span></span><span></span><span></span>
+        </button>
+      </div>
 
     </div>
   </header>
