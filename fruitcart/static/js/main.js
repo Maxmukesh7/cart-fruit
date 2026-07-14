@@ -589,7 +589,157 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
+  // ── 14. Live Search (AJAX) Handlers ───────────────────────────
+  
+  const searchInput = document.getElementById('fruit-search-input');
+  const searchForm = document.getElementById('fruits-search-form');
+
+  if (searchForm) {
+    searchForm.addEventListener('submit', function (e) {
+      e.preventDefault(); // Prevent full page reload on Enter press
+    });
+  }
+
+  if (searchInput) {
+    searchInput.addEventListener('input', debounce(function (e) {
+      performSearch(e.target.value);
+    }, 300));
+  }
+
+  function debounce(func, delay) {
+    let timeoutId;
+    return function (...args) {
+      clearTimeout(timeoutId);
+      timeoutId = setTimeout(() => func.apply(this, args), delay);
+    };
+  }
+
+  function performSearch(query) {
+    const ajaxContainer = document.getElementById('fruits-ajax-container');
+    if (!ajaxContainer) return;
+
+    const urlParams = new URLSearchParams(window.location.search);
+    if (query.trim() !== '') {
+      urlParams.set('search', query.trim());
+    } else {
+      urlParams.delete('search');
+    }
+    urlParams.delete('page'); // Reset pagination
+
+    const fetchUrl = window.location.pathname + '?' + urlParams.toString();
+    ajaxContainer.style.opacity = '0.6';
+
+    fetch(fetchUrl, {
+      headers: {
+        'X-Requested-With': 'XMLHttpRequest'
+      }
+    })
+    .then(response => {
+      if (!response.ok) throw new Error('Search failed');
+      return response.text();
+    })
+    .then(html => {
+      ajaxContainer.innerHTML = html;
+      ajaxContainer.style.opacity = '1.0';
+
+      // Update address bar URL dynamically
+      window.history.pushState({ path: fetchUrl }, '', fetchUrl);
+
+      if (query.trim() !== '') {
+        highlightResults(query.trim());
+      }
+    })
+    .catch(error => {
+      console.error(error);
+      ajaxContainer.style.opacity = '1.0';
+    });
+  }
+
+  function highlightResults(query) {
+    const container = document.getElementById('fruits-ajax-container');
+    if (!container) return;
+
+    const elements = container.querySelectorAll('.fruit-card__name a, .fruit-card__category');
+    const escapedQuery = escapeRegExp(query);
+    const regex = new RegExp(`(${escapedQuery})`, 'gi');
+
+    elements.forEach(el => {
+      const originalText = el.textContent;
+      if (regex.test(originalText)) {
+        el.innerHTML = originalText.replace(regex, '<mark class="search-highlight">$1</mark>');
+      }
+    });
+  }
+
+  function escapeRegExp(string) {
+    return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  }
+
+  // Intercept category pills and pagination clicks to perform AJAX loads
+  document.addEventListener('click', function (e) {
+    // 1. Intercept category filters
+    const categoryPill = e.target.closest('.category-pill');
+    if (categoryPill) {
+      const href = categoryPill.getAttribute('href');
+      if (href && href.startsWith('?')) {
+        e.preventDefault();
+        loadAjaxCatalog(window.location.pathname + href);
+      }
+      return;
+    }
+
+    // 2. Intercept pagination, tags, and clear buttons
+    const paginationLink = e.target.closest('.pagination a, .AJAX-nav-link, .filter-tag__remove, #clear-filters-btn, #search-clear-btn');
+    if (paginationLink) {
+      const href = paginationLink.getAttribute('href');
+      if (href) {
+        e.preventDefault();
+        const targetUrl = href.startsWith('/') ? href : window.location.pathname + href;
+        loadAjaxCatalog(targetUrl);
+      }
+      return;
+    }
+  });
+
+  function loadAjaxCatalog(url) {
+    const ajaxContainer = document.getElementById('fruits-ajax-container');
+    if (!ajaxContainer) return;
+
+    ajaxContainer.style.opacity = '0.6';
+
+    fetch(url, {
+      headers: {
+        'X-Requested-With': 'XMLHttpRequest'
+      }
+    })
+    .then(response => {
+      if (!response.ok) throw new Error('Failed to load page');
+      return response.text();
+    })
+    .then(html => {
+      ajaxContainer.innerHTML = html;
+      ajaxContainer.style.opacity = '1.0';
+      window.history.pushState({ path: url }, '', url);
+
+      // Sync input value with URL search parameter
+      const urlParams = new URLSearchParams(url.split('?')[1] || '');
+      const searchVal = urlParams.get('search') || '';
+      
+      const searchInput = document.getElementById('fruit-search-input');
+      if (searchInput) {
+        searchInput.value = searchVal;
+      }
+
+      if (searchVal.trim() !== '') {
+        highlightResults(searchVal.trim());
+      }
+    })
+    .catch(error => {
+      console.error(error);
+      ajaxContainer.style.opacity = '1.0';
+    });
+  }
+
 
   console.log('✅ FruitCart JS initialised — all systems go!');
 });
-

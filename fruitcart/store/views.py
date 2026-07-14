@@ -67,8 +67,11 @@ def fruits(request):
     # Search filter
     search_query = request.GET.get('search', '').strip()
     if search_query:
-        # icontains is a Django ORM lookup for case-insensitive containment
-        queryset = queryset.filter(name__icontains=search_query)
+        from django.db.models import Q
+        queryset = queryset.filter(
+            Q(name__icontains=search_query) |
+            Q(category__name__icontains=search_query)
+        )
 
     # Category filter
     category_slug = request.GET.get('category', '').strip()
@@ -109,6 +112,9 @@ def fruits(request):
         'result_count'  : paginator.count,  # Total results across all pages
         'cart'          : cart,
     }
+    
+    if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+        return render(request, 'store/includes/fruits_results_partial.html', context)
     return render(request, 'store/fruits.html', context)
 
 
@@ -532,4 +538,32 @@ def wishlist_move_to_cart(request, fruit_id):
         'cart_count': cart_count,
         'wishlist_count': wishlist_count
     })
+
+
+from django.core.exceptions import PermissionDenied
+from django.http import FileResponse
+from .utils import generate_invoice_pdf
+
+@login_required
+def download_invoice(request, order_id):
+    """
+    View to generate and download the PDF invoice for a specific order.
+    Only the customer who placed the order or staff/superusers can download it.
+    """
+    order = get_object_or_404(Order, pk=order_id)
+    
+    # Permission check: Owner of order or staff/superuser
+    if order.user != request.user and not request.user.is_staff:
+        raise PermissionDenied("You are not authorized to download this invoice.")
+        
+    pdf_buffer = generate_invoice_pdf(order)
+    filename = f"invoice_FC{1000 + order.pk}.pdf"
+    
+    return FileResponse(
+        pdf_buffer,
+        as_attachment=True,
+        content_type='application/pdf',
+        filename=filename
+    )
+
 

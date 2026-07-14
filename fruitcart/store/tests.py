@@ -249,3 +249,128 @@ class WishlistTest(TestCase):
         self.assertFalse(Wishlist.objects.filter(user=self.user, fruit=self.fruit).exists())
 
 
+class InvoiceDownloadTest(TestCase):
+    def setUp(self):
+        # Create normal users
+        self.owner = User.objects.create_user(username="owner", email="owner@example.com", password="password")
+        self.other_user = User.objects.create_user(username="other", email="other@example.com", password="password")
+        
+        # Create staff user
+        self.staff_user = User.objects.create_user(username="admin", email="admin@example.com", password="password", is_staff=True)
+        
+        # Create a fruit and an order
+        self.category = Category.objects.create(name="Berries", slug="berries")
+        self.fruit = Fruit.objects.create(
+            category=self.category,
+            name="Raspberry",
+            slug="raspberry",
+            price=250.00,
+            stock=50,
+            is_available=True,
+            unit="box"
+        )
+        
+        from store.models import Order, OrderItem
+        self.order = Order.objects.create(
+            user=self.owner,
+            full_name="Owner User",
+            phone="9999988888",
+            address="Owner's House, Sector 4",
+            city="Pune",
+            pincode="411001",
+            total_amount=250.00,
+            status="Pending"
+        )
+        
+        self.order_item = OrderItem.objects.create(
+            order=self.order,
+            fruit=self.fruit,
+            fruit_name=self.fruit.name,
+            unit_display=self.fruit.unit_display,
+            price=self.fruit.price,
+            quantity=1,
+            subtotal=250.00
+        )
+        
+        self.client = Client()
+
+    def test_anonymous_redirect_on_invoice_download(self):
+        # Anonymous should redirect to login
+        response = self.client.get(reverse('store:download_invoice', args=[self.order.id]))
+        self.assertEqual(response.status_code, 302)
+        self.assertIn(reverse('accounts:login'), response.url)
+
+    def test_owner_can_download_invoice(self):
+        self.client.login(username="owner", password="password")
+        response = self.client.get(reverse('store:download_invoice', args=[self.order.id]))
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.headers['content-type'], 'application/pdf')
+        self.assertIn('attachment', response.headers['content-disposition'])
+        self.assertIn(f'invoice_FC{1000 + self.order.id}.pdf', response.headers['content-disposition'])
+        content = b''.join(response.streaming_content)
+        self.assertTrue(content.startswith(b'%PDF'))
+
+    def test_staff_can_download_invoice(self):
+        self.client.login(username="admin", password="password")
+        response = self.client.get(reverse('store:download_invoice', args=[self.order.id]))
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.headers['content-type'], 'application/pdf')
+        content = b''.join(response.streaming_content)
+        self.assertTrue(content.startswith(b'%PDF'))
+
+    def test_unauthorized_user_forbidden(self):
+        # Another customer should get a 403 Forbidden
+        self.client.login(username="other", password="password")
+        response = self.client.get(reverse('store:download_invoice', args=[self.order.id]))
+        self.assertEqual(response.status_code, 403)
+
+
+class LiveSearchTest(TestCase):
+    def setUp(self):
+        self.category = Category.objects.create(name="Exotics", slug="exotics")
+        self.fruit = Fruit.objects.create(
+            category=self.category,
+            name="Dragonfruit",
+            slug="dragonfruit",
+            price=180.00,
+            stock=15,
+            is_available=True,
+            unit="piece"
+        )
+        self.client = Client()
+
+    def test_ajax_search_returns_partial(self):
+        # AJAX search request
+        response = self.client.get(
+            reverse('store:fruits'),
+            {'search': 'Dragon'},
+            HTTP_X_REQUESTED_WITH='XMLHttpRequest'
+        )
+        self.assertEqual(response.status_code, 200)
+        # Check it renders the partial results and not base.html navbar elements (like Logo/Search)
+        self.assertContains(response, 'Dragonfruit')
+        self.assertNotContains(response, '<header class="navbar"')
+
+    def test_ajax_search_by_category(self):
+        # Searching by category name ("Exotics")
+        response = self.client.get(
+            reverse('store:fruits'),
+            {'search': 'Exotics'},
+            HTTP_X_REQUESTED_WITH='XMLHttpRequest'
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Dragonfruit')
+
+    def test_non_ajax_search_returns_full_page(self):
+        # Non-AJAX search request
+        response = self.client.get(
+            reverse('store:fruits'),
+            {'search': 'Dragon'}
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Dragonfruit')
+        self.assertContains(response, '<header class="navbar"')
+
+
+
+

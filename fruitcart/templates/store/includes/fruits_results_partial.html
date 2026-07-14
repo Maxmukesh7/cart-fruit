@@ -1,0 +1,183 @@
+    {# Active filter tags #}
+    {% if search_query or active_category %}
+    <div class="active-filters" id="active-filters">
+      {% if search_query %}
+        <span class="filter-tag">
+          Search: <strong>{{ search_query }}</strong>
+          <a href="{% url 'store:fruits' %}{% if active_category %}?category={{ active_category.slug }}{% endif %}" class="filter-tag__remove" id="clear-search-tag" aria-label="Remove search filter">✕</a>
+        </span>
+      {% endif %}
+      {% if active_category %}
+        <span class="filter-tag">
+          Category: <strong>{{ active_category.name }}</strong>
+          <a href="{% url 'store:fruits' %}{% if search_query %}?search={{ search_query }}{% endif %}" class="filter-tag__remove" id="clear-category-tag" aria-label="Remove category filter">✕</a>
+        </span>
+      {% endif %}
+    </div>
+    {% endif %}
+
+    <p class="results-count" id="results-count">
+      Showing <strong>{{ result_count }}</strong> fruit{{ result_count|pluralize }}
+      {% if search_query %}for "<em>{{ search_query }}</em>"{% endif %}
+    </p>
+
+    {# ── Fruit Grid ────────────────────────────────────────── #}
+    {% if fruits %}
+      <div class="fruit-grid" id="fruit-grid">
+        {% for fruit in fruits %}
+          {# float wrapper — animation lives here, hover lift lives on the inner article #}
+          <div class="fruit-card-float">
+            <article class="fruit-card {% if not fruit.in_stock %}fruit-card--oos{% endif %}"
+                     id="fruit-{{ fruit.id }}"
+                     aria-label="{{ fruit.name }}">
+
+              {# Card image #}
+              <div class="fruit-card__img-wrap">
+                <button
+                  type="button"
+                  class="wishlist-btn {% if fruit.id in wishlist_ids %}wishlist-btn--active{% endif %}"
+                  data-url="{% url 'store:wishlist_toggle' fruit.id %}"
+                  aria-label="Add to wishlist"
+                >
+                  <svg class="heart-icon" viewBox="0 0 24 24">
+                    <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+                  </svg>
+                </button>
+                <a href="{% url 'store:fruit_detail' fruit.slug %}" class="fruit-card__img-link" aria-hidden="true" tabindex="-1">
+                  {% if fruit.image %}
+                    <img
+                      src="{{ fruit.image.url }}"
+                      alt="{{ fruit.name }}"
+                      class="fruit-card__img"
+                      loading="lazy"
+                    />
+                  {% else %}
+                    <div class="fruit-card__img-placeholder" aria-hidden="true">🍑</div>
+                  {% endif %}
+                </a>
+
+                {# Out-of-stock overlay #}
+                {% if not fruit.in_stock %}
+                  <div class="fruit-card__oos-overlay">Out of Stock</div>
+                {% endif %}
+
+                {# Qty overlay — only for in-stock fruits #}
+                {% if fruit.in_stock %}
+                  <div class="card-qty-overlay" aria-label="Quantity selector">
+                    <button
+                      type="button"
+                      class="card-qty-btn card-qty-btn--dec"
+                      data-form="add-form-{{ fruit.slug }}"
+                      aria-label="Decrease quantity"
+                    >−</button>
+                    <span class="card-qty-display" id="qty-display-{{ fruit.slug }}">1</span>
+                    <button
+                      type="button"
+                      class="card-qty-btn card-qty-btn--inc"
+                      data-form="add-form-{{ fruit.slug }}"
+                      data-max="{{ fruit.stock }}"
+                      aria-label="Increase quantity"
+                    >+</button>
+                  </div>
+                {% endif %}
+              </div>
+
+              {# Card body #}
+              <div class="fruit-card__body">
+                {% if fruit.category %}
+                  <span class="fruit-card__category">{{ fruit.category.name }}</span>
+                {% endif %}
+
+                <h2 class="fruit-card__name">
+                  <a href="{% url 'store:fruit_detail' fruit.slug %}">{{ fruit.name }}</a>
+                </h2>
+
+                <div class="fruit-card__meta">
+                  <span class="fruit-card__price price-unit">
+                    <span class="price-unit__price">₹{{ fruit.price }}</span>
+                    <span class="price-unit__unit">/ {{ fruit.unit_display }}</span>
+                  </span>
+                  {% if fruit.in_stock %}
+                    <span class="stock-badge stock-badge--in">In Stock</span>
+                  {% else %}
+                    <span class="stock-badge stock-badge--out">Out of Stock</span>
+                  {% endif %}
+                </div>
+
+                <div class="fruit-card__actions">
+                  <a
+                    href="{% url 'store:fruit_detail' fruit.slug %}"
+                    class="btn btn--outline fruit-card__view-btn"
+                    id="view-{{ fruit.slug }}"
+                  >Details</a>
+
+                  {% if fruit.in_stock %}
+                    <form
+                      action="{% url 'store:cart_add' fruit.pk %}"
+                      method="post"
+                      class="fruit-card__add-form add-to-cart-form"
+                      id="add-form-{{ fruit.slug }}"
+                    >
+                      {% csrf_token %}
+                      <input type="hidden" name="quantity" value="1" />
+                      <input type="hidden" name="next" value="{{ request.get_full_path }}#fruit-{{ fruit.id }}" />
+                      <button
+                        type="submit"
+                        class="btn btn--primary fruit-card__add-btn"
+                        id="cart-add-{{ fruit.slug }}"
+                      >+ Cart</button>
+                    </form>
+                  {% else %}
+                    <button class="btn btn--primary fruit-card__add-btn fruit-card__add-btn--disabled" disabled>
+                      + Cart
+                    </button>
+                  {% endif %}
+                </div>
+              </div>
+
+            </article>
+          </div>{# /fruit-card-float #}
+        {% endfor %}
+      </div>
+
+      {# ── Pagination ───────────────────────────────────────── #}
+      {% if fruits.has_other_pages %}
+      <div class="pagination" style="display: flex; justify-content: center; align-items: center; gap: 0.5rem; margin-top: 3rem;">
+        {% if fruits.has_previous %}
+          <a href="?page={{ fruits.previous_page_number }}&sort={{ sort_by }}{% if search_query %}&search={{ search_query }}{% endif %}{% if active_category %}&category={{ active_category.slug }}{% endif %}" class="btn btn--outline AJAX-nav-link" style="padding: 0.5rem 1rem;">&laquo; Prev</a>
+        {% else %}
+          <span class="btn btn--outline" style="padding: 0.5rem 1rem; opacity: 0.5; cursor: not-allowed;">&laquo; Prev</span>
+        {% endif %}
+
+        <span class="pagination__current" style="font-weight: 600; color: var(--text-dark);">
+          Page {{ fruits.number }} of {{ fruits.paginator.num_pages }}
+        </span>
+
+        {% if fruits.has_next %}
+          <a href="?page={{ fruits.next_page_number }}&sort={{ sort_by }}{% if search_query %}&search={{ search_query }}{% endif %}{% if active_category %}&category={{ active_category.slug }}{% endif %}" class="btn btn--outline AJAX-nav-link" style="padding: 0.5rem 1rem;">Next &raquo;</a>
+        {% else %}
+          <span class="btn btn--outline" style="padding: 0.5rem 1rem; opacity: 0.5; cursor: not-allowed;">Next &raquo;</span>
+        {% endif %}
+      </div>
+      {% endif %}
+
+    {% else %}
+      {# Empty state #}
+      <div class="empty-state" id="fruits-empty-state">
+        <div class="empty-state__icon">🔍</div>
+        <h2 class="empty-state__title">No fruits found</h2>
+        <p class="empty-state__text">
+          {% if search_query %}
+            No fruits match "<strong>{{ search_query }}</strong>".
+            Try a different search term or browse all fruits.
+          {% elif active_category %}
+            No fruits in this category yet. Check back soon!
+          {% else %}
+            No fruits are currently available. Check back soon!
+          {% endif %}
+        </p>
+        <a href="{% url 'store:fruits' %}" class="btn btn--outline" id="clear-filters-btn">
+          Clear Filters
+        </a>
+      </div>
+    {% endif %}

@@ -160,10 +160,10 @@ class OrderItemInline(admin.TabularInline):
 
 @admin.register(Order)
 class OrderAdmin(admin.ModelAdmin):
-    list_display = ('id', 'user', 'full_name', 'total_amount', 'status', 'created_at')
+    list_display = ('id', 'user', 'full_name', 'total_amount', 'status', 'created_at', 'download_invoice_link')
     list_filter = ('status', 'created_at')
     search_fields = ('user__username', 'full_name', 'phone')
-    readonly_fields = ('user', 'full_name', 'phone', 'address', 'city', 'pincode', 'total_amount', 'created_at')
+    readonly_fields = ('user', 'full_name', 'phone', 'address', 'city', 'pincode', 'total_amount', 'created_at', 'download_invoice_link')
     inlines = [OrderItemInline]
     
     fieldsets = (
@@ -174,9 +174,17 @@ class OrderAdmin(admin.ModelAdmin):
             "fields": ('address', 'city', 'pincode')
         }),
         ("Order Details", {
-            "fields": ('total_amount', 'status', 'created_at')
+            "fields": ('total_amount', 'status', 'created_at', 'download_invoice_link')
         })
     )
+
+    def download_invoice_link(self, obj):
+        from django.urls import reverse
+        from django.utils.html import format_html
+        url = reverse('store:download_invoice', args=[obj.pk])
+        return format_html('<a class="button" href="{}" target="_blank" style="padding: 4px 8px; background: var(--color-primary, #2E7D32); color: white; border-radius: 4px; text-decoration: none;">Download PDF</a>', url)
+    download_invoice_link.short_description = "Invoice"
+
 
     def has_add_permission(self, request):
         return False  # Orders should only be created via checkout

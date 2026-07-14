@@ -21,6 +21,7 @@ urlpatterns = [
     path('checkout/', views.checkout, name='checkout'),                   # /checkout/
     path('orders/', views.orders_list, name='orders'),                    # /orders/
     path('orders/<int:order_id>/', views.order_detail, name='order_detail'), # /orders/<id>/
+    path('orders/<int:order_id>/invoice/', views.download_invoice, name='download_invoice'),
 
     # ── Wishlist ───────────────────────────────────────────────────
     path('wishlist/', views.wishlist_detail, name='wishlist'),
